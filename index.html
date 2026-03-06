@@ -2953,30 +2953,59 @@ async function importBook(bookId,withReadDate=false){
 async function importBookRead(bookId){await importBook(bookId,true);}
 
 // ── Invite links ──
-function buildInviteLinks(){
+async function shortenUrl(url){
+  try{
+    const r=await fetch('https://tinyurl.com/api-create.php?url='+encodeURIComponent(url));
+    if(r.ok){const t=await r.text();if(t.startsWith('https://'))return t.trim();}
+  }catch(e){}
+  return url; // fallback to full URL
+}
+
+async function buildInviteLinks(){
   const base=window.location.origin+window.location.pathname;
   const p=getProfile();
   const name=encodeURIComponent([p.firstName,p.lastName].filter(Boolean).join(' ')||currentUser?.email||'Kulture');
+
+  // Show loading state
+  document.getElementById('inviteLinkBox').textContent='⏳ Génération du lien…';
+  document.getElementById('friendLinkBox').textContent='⏳ Génération du lien…';
+
   const inviteUrl=`${base}?invite=1&from=${name}`;
-  const friendUrl=currentUser?`${base}?friend=${currentUser.id}&name=${name}`:'Connectez-vous pour générer ce lien.';
-  document.getElementById('inviteLinkBox').textContent=inviteUrl;
-  document.getElementById('friendLinkBox').textContent=friendUrl;
+  const friendUrl=currentUser?`${base}?friend=${currentUser.id}&name=${name}`:null;
+
+  // Shorten both
+  const [shortInvite, shortFriend]=await Promise.all([
+    shortenUrl(inviteUrl),
+    friendUrl?shortenUrl(friendUrl):Promise.resolve(null)
+  ]);
+
+  document.getElementById('inviteLinkBox').textContent=shortInvite;
+  window._inviteLink=shortInvite;
+
+  if(shortFriend){
+    document.getElementById('friendLinkBox').textContent=shortFriend;
+    window._friendLink=shortFriend;
+  } else {
+    document.getElementById('friendLinkBox').textContent='Connectez-vous pour générer ce lien.';
+    window._friendLink=null;
+  }
 }
 
 function copyInviteLink(type){
-  const text=document.getElementById(type==='invite'?'inviteLinkBox':'friendLinkBox').textContent;
+  const text=type==='invite'?window._inviteLink:window._friendLink;
+  if(!text)return;
   navigator.clipboard.writeText(text).then(()=>showToast('📋 Lien copié !','success')).catch(()=>{
-    // fallback
     const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
     showToast('📋 Lien copié !','success');
   });
 }
 
 function shareInviteLink(type){
-  const text=document.getElementById(type==='invite'?'inviteLinkBox':'friendLinkBox').textContent;
+  const text=type==='invite'?window._inviteLink:window._friendLink;
+  if(!text)return;
   const title=type==='invite'?'Rejoins-moi sur Kulture !':'Deviens mon ami sur Kulture !';
   if(navigator.share){
-    navigator.share({title,text:title,url:text}).catch(()=>{});
+    navigator.share({title,text:title+'\n'+text,url:text}).catch(()=>{});
   } else {
     copyInviteLink(type);
     showToast('Lien copié — collez-le dans WhatsApp ou SMS !','success');
