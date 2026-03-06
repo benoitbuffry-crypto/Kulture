@@ -3167,7 +3167,10 @@ function renderAdminUsers(users){
   if(!users.length){tbody.innerHTML='<tr><td colspan="6" style="color:var(--text-dim);">Aucun utilisateur.</td></tr>';return;}
   tbody.innerHTML=users.map(u=>{
     const updAt=u.updated_at?String(u.updated_at):'';
-    const date=updAt?new Date(updAt).toLocaleDateString('fr-FR'):'—';
+    const createdAt=u.created_at?String(u.created_at):'';
+    const dateVal=createdAt||updAt;
+    const parsed=dateVal?new Date(dateVal):null;
+    const date=(parsed&&!isNaN(parsed))?parsed.toLocaleDateString('fr-FR'):'—';
     const lastLogin=_adminLastLogin[u.id]
       ?new Date(_adminLastLogin[u.id]).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
       :'—';
@@ -3197,14 +3200,19 @@ async function toggleUserRole(userId,currentRole){
 
 async function exportAdminUsers(){
   if(!_adminUsers.length){showToast('Aucun utilisateur.','error');return;}
-  const rows=_adminUsers.map(u=>({
-    'Email':u.email||'',
-    'Nom':u.display_name||'',
-    'Rôle':u.role||'user',
-    'Inscrit le':u.updated_at?new Date(u.updated_at).toLocaleDateString('fr-FR'):'',
-  }));
+  const rows=_adminUsers.map(u=>{
+    const d=new Date(String(u.created_at||u.updated_at||''));
+    const lastLogin=_adminLastLogin[u.id]?new Date(_adminLastLogin[u.id]).toLocaleString('fr-FR'):'';
+    return{
+      'Email':u.email||'',
+      'Nom':u.display_name||'',
+      'Rôle':u.role||'user',
+      'Inscrit le':isNaN(d)?'':d.toLocaleDateString('fr-FR'),
+      'Dernière connexion':lastLogin,
+    };
+  });
   const ws=XLSX.utils.json_to_sheet(rows);
-  ws['!cols']=[{wch:32},{wch:25},{wch:12},{wch:14}];
+  ws['!cols']=[{wch:32},{wch:25},{wch:12},{wch:14},{wch:18}];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Utilisateurs');
   XLSX.writeFile(wb,`kulture_users_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -3372,8 +3380,7 @@ async function exportAdminStats(){
   if(_adminUsers.length){
     const rows=_adminUsers.map(u=>({
       'Email':u.email||'','Nom':u.display_name||'','Rôle':u.role||'user',
-      'Inscrit le':u.updated_at?new Date(String(u.updated_at)).toLocaleDateString('fr-FR'):'',
-      'Dernière connexion':_adminLastLogin[u.id]?new Date(_adminLastLogin[u.id]).toLocaleString('fr-FR'):'',
+      'Inscrit le':(()=>{const d=new Date(String(u.created_at||u.updated_at||''));return isNaN(d)?'':d.toLocaleDateString('fr-FR');})(),
     }));
     const ws3=XLSX.utils.json_to_sheet(rows);
     ws3['!cols']=[{wch:32},{wch:25},{wch:12},{wch:14}];
