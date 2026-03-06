@@ -367,6 +367,10 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
 .friends-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;}
 .friends-tab{flex:1;padding:10px 6px;font-size:12px;font-family:var(--font-b);color:var(--text-dim);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;text-align:center;}
 .friends-tab.active{color:var(--accent2);border-bottom-color:var(--accent);}
+.invite-section{background:var(--bg3);border-radius:10px;padding:14px;}
+.invite-title{font-family:var(--font-b);font-size:13px;color:var(--cream);margin-bottom:6px;}
+.invite-desc{font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.5;}
+.invite-link-box{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;font-size:11px;color:var(--accent2);word-break:break-all;font-family:monospace;min-height:36px;}
 .friend-card{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
 .friend-card:last-child{border-bottom:none;}
 .friend-avatar{width:38px;height:38px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden;}
@@ -440,6 +444,8 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Connexion</button>
       <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Créer un compte</button>
     </div>
+
+    <div id="authWelcomeMsg" style="display:none;background:rgba(196,103,58,0.12);border:1px solid var(--accent);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--accent2);text-align:center;margin-bottom:12px;"></div>
 
     <div class="auth-form">
       <input class="auth-input" type="email" id="authEmail" placeholder="Adresse email" autocomplete="email">
@@ -1073,6 +1079,7 @@ async function onSignedIn(user){
   renderGrid();
   updateViewToggleBtn();
   pollPendingFriends();
+  processPendingFriendRequest();
   syncNow(true);
 }
 
@@ -2717,6 +2724,7 @@ function switchFriendsTab(tab){
     document.getElementById('ftab-'+t).classList.toggle('active',t===tab);
     document.getElementById('ftab-panel-'+t).style.display=t===tab?'':'none';
   });
+  if(tab==='find') buildInviteLinks();
 }
 
 // ── Supabase helpers ──
@@ -2944,7 +2952,86 @@ async function importBook(bookId,withReadDate=false){
 }
 async function importBookRead(bookId){await importBook(bookId,true);}
 
-// ── Poll pending on sign in ──
+// ── Invite links ──
+function buildInviteLinks(){
+  const base=window.location.origin+window.location.pathname;
+  const p=getProfile();
+  const name=encodeURIComponent([p.firstName,p.lastName].filter(Boolean).join(' ')||currentUser?.email||'Kulture');
+  const inviteUrl=`${base}?invite=1&from=${name}`;
+  const friendUrl=currentUser?`${base}?friend=${currentUser.id}&name=${name}`:'Connectez-vous pour générer ce lien.';
+  document.getElementById('inviteLinkBox').textContent=inviteUrl;
+  document.getElementById('friendLinkBox').textContent=friendUrl;
+}
+
+function copyInviteLink(type){
+  const text=document.getElementById(type==='invite'?'inviteLinkBox':'friendLinkBox').textContent;
+  navigator.clipboard.writeText(text).then(()=>showToast('📋 Lien copié !','success')).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    showToast('📋 Lien copié !','success');
+  });
+}
+
+function shareInviteLink(type){
+  const text=document.getElementById(type==='invite'?'inviteLinkBox':'friendLinkBox').textContent;
+  const title=type==='invite'?'Rejoins-moi sur Kulture !':'Deviens mon ami sur Kulture !';
+  if(navigator.share){
+    navigator.share({title,text:title,url:text}).catch(()=>{});
+  } else {
+    copyInviteLink(type);
+    showToast('Lien copié — collez-le dans WhatsApp ou SMS !','success');
+  }
+}
+
+// ── Handle URL params on load (invite / friend request) ──
+function handleUrlParams(){
+  const params=new URLSearchParams(window.location.search);
+  const invite=params.get('invite');
+  const fromName=params.get('from')?decodeURIComponent(params.get('from')):'';
+  const friendId=params.get('friend');
+  const friendName=params.get('name')?decodeURIComponent(params.get('name')):'';
+
+  if(invite==='1'&&fromName){
+    // Show welcome message on auth screen
+    const msg=document.getElementById('authWelcomeMsg');
+    if(msg){msg.textContent=`👋 ${fromName} vous invite à rejoindre Kulture !`;msg.style.display='block';}
+  }
+
+  if(friendId&&currentUser&&currentUser.id!==friendId){
+    // Auto-send friend request
+    _pendingFriendId=friendId;
+    _pendingFriendName=friendName;
+    processPendingFriendRequest();
+  } else if(friendId&&!currentUser){
+    // Store for after login
+    _pendingFriendId=friendId;
+    _pendingFriendName=friendName;
+  }
+
+  // Clean URL
+  if(invite||friendId){
+    window.history.replaceState({},'',window.location.pathname);
+  }
+}
+
+let _pendingFriendId=null, _pendingFriendName='';
+
+async function processPendingFriendRequest(){
+  if(!_pendingFriendId||!currentUser||currentUser.id===_pendingFriendId)return;
+  const sb=getSbClient();if(!sb)return;
+  // Check if friendship already exists
+  const{data:existing}=await sb.from('friendships').select('*')
+    .or(`and(requester_id.eq.${currentUser.id},addressee_id.eq.${_pendingFriendId}),and(requester_id.eq.${_pendingFriendId},addressee_id.eq.${currentUser.id})`);
+  if(existing&&existing.length){
+    showToast('Vous êtes déjà amis avec '+(_pendingFriendName||'cet utilisateur')+' !','');
+  } else {
+    const{error}=await sb.from('friendships').insert({requester_id:_pendingFriendId,addressee_id:currentUser.id,status:'pending'});
+    if(!error) showToast('🤝 Demande d\'ami reçue de '+(_pendingFriendName||'quelqu\'un')+' !','success');
+  }
+  _pendingFriendId=null;_pendingFriendName='';
+}
+
+
 async function pollPendingFriends(){
   if(!sbOk()||!currentUser) return;
   const rows=await sbPending();
@@ -3161,6 +3248,7 @@ if(!books.length){
   ];saveBooks();
 }
 initAuth();
+handleUrlParams();
 </script>
 <!-- EXCEL IMPORT MODAL -->
 <div class="modal-overlay" id="xlModal">
@@ -3258,6 +3346,27 @@ initAuth();
           <button class="btn btn-primary" onclick="searchFriend()">Chercher</button>
         </div>
         <div id="friendSearchResult"></div>
+
+        <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">
+          <div class="invite-section">
+            <div class="invite-title">📨 Inviter à créer un compte</div>
+            <div class="invite-desc">Partagez ce lien pour inviter quelqu'un à rejoindre Kulture.</div>
+            <div class="invite-link-box" id="inviteLinkBox">Chargement…</div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn btn-primary" style="flex:1" onclick="copyInviteLink('invite')">📋 Copier</button>
+              <button class="btn btn-secondary" style="flex:1" onclick="shareInviteLink('invite')">📤 Partager</button>
+            </div>
+          </div>
+          <div class="invite-section" style="margin-top:12px;">
+            <div class="invite-title">🤝 Lien pour devenir amis</div>
+            <div class="invite-desc">Partagez ce lien avec quelqu'un qui a déjà un compte. La demande d'ami sera envoyée automatiquement.</div>
+            <div class="invite-link-box" id="friendLinkBox">Chargement…</div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn btn-primary" style="flex:1" onclick="copyInviteLink('friend')">📋 Copier</button>
+              <button class="btn btn-secondary" style="flex:1" onclick="shareInviteLink('friend')">📤 Partager</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
