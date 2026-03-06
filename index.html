@@ -3093,11 +3093,24 @@ let isSuperAdmin=false;
 async function checkAdminRole(){
   const sb=getSbClient();if(!sb||!currentUser)return;
   try{
-    const{data}=await sb.from('profiles').select('role').eq('id',currentUser.id).single();
-    isSuperAdmin=(data?.role==='superadmin');
-    const btn=document.getElementById('adminBtn');
-    if(btn)btn.style.display=isSuperAdmin?'':'none';
-  }catch(e){}
+    const{data,error}=await sb.from('profiles').select('role').eq('id',currentUser.id).single();
+    console.log('[Admin] profile query →',data,error);
+    if(error){
+      // Fallback : hardcoded superadmin emails
+      const adminEmails=['benoit.buffry@gmail.com'];
+      isSuperAdmin=adminEmails.includes(currentUser.email);
+      console.log('[Admin] fallback by email →',isSuperAdmin);
+    } else {
+      isSuperAdmin=(data?.role==='superadmin');
+    }
+  }catch(e){
+    console.warn('[Admin] checkAdminRole error:',e);
+    const adminEmails=['benoit.buffry@gmail.com'];
+    isSuperAdmin=adminEmails.includes(currentUser.email);
+  }
+  const btn=document.getElementById('adminBtn');
+  if(btn)btn.style.display=isSuperAdmin?'':'none';
+  console.log('[Admin] isSuperAdmin =',isSuperAdmin,'btn =',btn?.style.display);
 }
 
 async function logEvent(event,meta={}){
