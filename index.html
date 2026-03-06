@@ -83,11 +83,12 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--font-b);min-h
 @media(min-width:600px){.library-grid{grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:16px;padding:14px 20px 100px;}}
 /* ── List view ── */
 .library-grid.list-view{display:flex;flex-direction:column;gap:0;padding:0 0 calc(var(--safe-bottom)+80px);}
-.list-item{display:grid;grid-template-columns:42px 1fr 1fr 1fr 80px 36px;align-items:center;gap:0;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;background:var(--bg2);min-height:44px;}
+.list-item,.list-header{display:grid;grid-template-columns:42px 2fr 1.2fr 1fr 0.8fr 50px 1fr 80px 36px;align-items:center;gap:0;border-bottom:1px solid var(--border);min-height:44px;}
+.list-item{cursor:pointer;transition:background 0.15s;background:var(--bg2);}
 .list-item:first-child{border-top:1px solid var(--border);}
 .list-item:hover,.list-item:active{background:var(--bg3);}
 /* Table header row */
-.list-header{display:grid;grid-template-columns:42px 1fr 1fr 1fr 80px 36px;align-items:center;gap:0;border-bottom:2px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:5;padding:0;}
+.list-header{border-bottom:2px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:5;}
 .list-header-cell{font-size:9px;text-transform:uppercase;letter-spacing:0.9px;color:var(--text-dim);padding:7px 10px;}
 .list-thumb{width:42px;height:100%;min-height:44px;flex-shrink:0;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .list-thumb img{width:42px;height:100%;min-height:44px;object-fit:cover;}
@@ -108,9 +109,9 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--font-b);min-h
 .list-read-btn.read::after{content:'✓';font-weight:700;font-size:13px;color:#fff;}
 .list-read-btn.unread::after{content:'✓';font-weight:700;font-size:13px;color:rgba(200,195,185,0.3);}
 .list-read-btn:hover{transform:scale(1.12);}
-@media(max-width:480px){
-  .list-item,.list-header{grid-template-columns:42px 1fr 1fr 26px;}
-  .list-col-hidden{display:none;}
+@media(max-width:640px){
+  .list-item,.list-header{grid-template-columns:42px 1fr 80px 36px;}
+  .list-col-a,.list-col-s,.list-col-g,.list-col-y,.list-col-p{display:none;}
 }
 /* View toggle button active state */
 .btn-icon.active{background:rgba(196,103,58,0.2);border-color:var(--accent);color:var(--accent2);}
@@ -344,23 +345,23 @@ details[open] .adv-summary::after{transform:rotate(90deg);}
 .tab-panel{display:none;}.tab-panel.active{display:block;}
 hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
 /* Selection mode */
-.sel-list-view{display:grid;width:100%;}
-.sel-list-header,.sel-list-item{display:grid;grid-template-columns:44px 42px 2fr 1.2fr 1fr 1fr 1fr 60px 100px;align-items:center;gap:0;border-bottom:1px solid var(--border);min-height:44px;}
-.sel-list-header{background:var(--bg3);font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-dim);position:sticky;top:calc(var(--safe-top) + 112px);z-index:10;}
+.sel-list-view{display:flex;flex-direction:column;gap:0;}
+.sel-list-header,.sel-list-item{display:grid;grid-template-columns:44px 42px 2fr 1.2fr 1fr 0.8fr 50px 1fr 80px 36px;align-items:center;gap:0;border-bottom:1px solid var(--border);min-height:44px;}
+.sel-list-header{background:var(--bg3);font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-dim);position:sticky;top:0;z-index:10;border-bottom:2px solid var(--border);}
 .sel-list-item:hover{background:rgba(196,103,58,0.06);}
 .sel-list-item.selected{background:rgba(196,103,58,0.12);border-left:3px solid var(--accent);}
 .sel-chk-cell{display:flex;align-items:center;justify-content:center;padding:0 6px;}
 .sel-chk-box{width:18px;height:18px;border-radius:4px;border:2px solid var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
 .sel-chk-box.checked{background:var(--accent);border-color:var(--accent);}
-.sel-chk-box.checked::after{content:'✓';font-size:11px;color:white;font-weight:700;}
+.sel-chk-box.checked::after{content:'\2713';font-size:11px;color:white;font-weight:700;}
 .sel-thumb{width:30px;height:44px;object-fit:cover;display:block;}
 .sel-thumb-ph{width:30px;height:44px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;}
 .sel-cell{padding:0 8px;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sel-cell.title{font-family:var(--font-d);color:var(--cream);}
 .sel-cell.dim{color:var(--text-dim);font-size:11px;}
-@media(max-width:639px){
-  .sel-list-header,.sel-list-item{grid-template-columns:44px 38px 1fr 80px;}
-  .sel-col-author,.sel-col-series,.sel-col-genre,.sel-col-pub,.sel-col-year{display:none;}
+@media(max-width:640px){
+  .sel-list-header,.sel-list-item{grid-template-columns:44px 42px 1fr 80px 36px;}
+  .sel-col-author,.sel-col-series,.sel-col-genre,.sel-col-year,.sel-col-pub{display:none;}
 }
 /* ── FRIENDS ── */
 .friends-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;}
@@ -471,7 +472,7 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
   <div class="header-row">
     <div class="app-title">K<span>ulture</span></div>
     <div class="header-actions">
-      <button class="btn-icon" id="viewToggleBtn" onclick="toggleViewMode()" title="Changer l'affichage">
+      <button class="btn-icon" id="viewToggleBtn" onclick="toggleViewMode()" title="Mode Liste">
         <svg id="viewToggleIcon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
           <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
@@ -1224,25 +1225,28 @@ function selectListHeader(){
     <div></div>
     <div class="sel-cell">Titre</div>
     <div class="sel-cell sel-col-author">Auteur</div>
-    <div class="sel-cell sel-col-series">Série</div>
+    <div class="sel-cell sel-col-series">S\u00e9rie</div>
     <div class="sel-cell sel-col-genre">Genre</div>
-    <div class="sel-cell sel-col-pub">Éditeur</div>
-    <div class="sel-cell sel-col-year">Année</div>
+    <div class="sel-cell sel-col-year">Ann\u00e9e</div>
+    <div class="sel-cell sel-col-pub">\u00c9diteur</div>
     <div class="sel-cell">Lu le</div>
+    <div></div>
   </div>`;
 }
 function renderSelectListItem(b){
   const sel=selectedIds.has(b.id);
+  const readDate=b.readDate?new Date(b.readDate).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):'';
   return`<div class="sel-list-item${sel?' selected':''}" data-id="${b.id}" onclick="toggleSelectItem('${b.id}',this)">
     <div class="sel-chk-cell"><div class="sel-chk-box${sel?' checked':''}"></div></div>
     <div>${b.cover?`<img class="sel-thumb" src="${b.cover}" data-id="${b.id}" data-isbn="${b.isbn||''}" onerror="coverError(this)">`:`<div class="sel-thumb-ph">${TI[b.type]||'\uD83D\uDCDA'}</div>`}</div>
     <div class="sel-cell title">${esc(b.title)}</div>
     <div class="sel-cell dim sel-col-author">${esc(b.author||'')}</div>
     <div class="sel-cell dim sel-col-series">${esc(b.series?b.series+(b.volume?' T.'+b.volume:''):'')}</div>
-    <div class="sel-cell dim sel-col-genre">${esc(b.genre||'')}</div>
-    <div class="sel-cell dim sel-col-pub">${esc(b.publisher||'')}</div>
+    <div class="sel-cell dim sel-col-genre">${esc(b.genre||TL[b.type]||b.type)}</div>
     <div class="sel-cell dim sel-col-year">${esc(b.year||'')}</div>
-    <div class="sel-cell dim">${b.readDate?new Date(b.readDate).toLocaleDateString('fr-FR',{month:'short',year:'numeric'}):''}</div>
+    <div class="sel-cell dim sel-col-pub">${esc(b.publisher||'')}</div>
+    <div class="sel-cell dim">${readDate}</div>
+    <div></div>
   </div>`;
 }
 
@@ -1258,10 +1262,12 @@ function updateViewToggleBtn(){
   if(!btn)return;
   if(viewMode==='list'){
     btn.classList.add('active');
+    btn.title='Mode Vignette';
     // List icon (lines)
     icon.innerHTML=`<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>`;
   } else {
     btn.classList.remove('active');
+    btn.title='Mode Liste';
     // Grid icon (squares)
     icon.innerHTML=`<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>`;
   }
@@ -1270,45 +1276,38 @@ function updateViewToggleBtn(){
 function listHeader(){
   return `<div class="list-header">
     <div></div>
-    <div class="list-header-cell">Titre / Auteur</div>
-    <div class="list-header-cell list-col-hidden">Série / Genre</div>
-    <div class="list-header-cell list-col-hidden">Éditeur / Année</div>
-    <div class="list-header-cell list-col-hidden">Date de lecture</div>
-    <div class="list-header-cell"></div>
+    <div class="list-header-cell">Titre</div>
+    <div class="list-header-cell list-col-a">Auteur</div>
+    <div class="list-header-cell list-col-s">Série</div>
+    <div class="list-header-cell list-col-g">Genre</div>
+    <div class="list-header-cell list-col-y">Année</div>
+    <div class="list-header-cell list-col-p">Éditeur</div>
+    <div class="list-header-cell">Lu le</div>
+    <div></div>
   </div>`;
 }
 
 function renderListItem(b){
   const readTitle=b.readDate?'Lu le '+new Date(b.readDate).toLocaleDateString('fr-FR'):'Marquer comme lu';
-  const seriesStr=b.series?(b.series+(b.volume?' · T.'+b.volume:'')):'';
-  const pubStr=[b.publisher,b.collection].filter(Boolean).join(' · ');
-  const readStr=b.readDate?new Date(b.readDate).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):'—';
+  const seriesStr=b.series?(b.series+(b.volume?' \u00b7 T.'+b.volume:'')):'\u2014';
+  const readStr=b.readDate?new Date(b.readDate).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):'\u2014';
   return `<div class="list-item" onclick="openDetail('${b.id}')">
     <div class="list-thumb">
-      ${b.cover?`<img src="${b.cover}" alt="${esc(b.title)}" loading="lazy">`
-        :`<div class="cover-placeholder"><div class="icon">${TI[b.type]||'📚'}</div></div>`}
+      ${b.cover?`<img src="${b.cover}" alt="${esc(b.title)}" loading="lazy" data-id="${b.id}" data-isbn="${b.isbn||''}" onerror="coverError(this)">`
+        :`<div class="cover-placeholder"><div class="icon">${TI[b.type]||'\U0001f4da'}</div></div>`}
     </div>
-    <div class="list-cell">
-      <span class="list-title">${esc(b.title)}</span>
-      <span class="list-author">${esc(b.author||'—')}</span>
-    </div>
-    <div class="list-cell list-col-hidden">
-      ${seriesStr?`<span class="list-col-text">${esc(seriesStr)}</span>`:'<span class="list-col-dim">—</span>'}
-      ${b.genre?`<span class="list-genre-badge">🏷 ${esc(b.genre)}</span>`:`<span class="list-type-badge">${TI[b.type]||'?'} ${TL[b.type]||b.type}</span>`}
-    </div>
-    <div class="list-cell list-col-hidden">
-      ${pubStr?`<span class="list-col-text">${esc(pubStr)}</span>`:'<span class="list-col-dim">—</span>'}
-      ${b.year?`<span class="list-col-dim">${esc(b.year)}</span>`:''}
-    </div>
-    <div class="list-cell list-col-hidden">
-      <span class="${b.readDate?'list-col-text':'list-col-dim'}" style="${b.readDate?'color:var(--green);':''}">${readStr}</span>
-    </div>
+    <div class="list-cell"><span class="list-title">${esc(b.title)}</span></div>
+    <div class="list-cell list-col-a"><span class="list-col-text">${esc(b.author||'\u2014')}</span></div>
+    <div class="list-cell list-col-s"><span class="list-col-text">${seriesStr}</span></div>
+    <div class="list-cell list-col-g"><span class="list-col-text">${esc(b.genre||TL[b.type]||b.type)}</span></div>
+    <div class="list-cell list-col-y"><span class="list-col-dim">${esc(b.year||'\u2014')}</span></div>
+    <div class="list-cell list-col-p"><span class="list-col-text">${esc(b.publisher||'\u2014')}</span></div>
+    <div class="list-cell"><span class="${b.readDate?'list-col-text':'list-col-dim'}" style="${b.readDate?'color:var(--green);':''}">${readStr}</span></div>
     <div class="list-read-col">
       <button class="list-read-btn ${b.readDate?'read':'unread'}" onclick="event.stopPropagation();toggleRead('${b.id}')" title="${readTitle}"></button>
     </div>
   </div>`;
 }
-
 function toggleRead(id){
   const b=books.find(b=>b.id===id);
   if(!b)return;
