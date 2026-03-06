@@ -1,0 +1,3280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kulture">
+<meta name="theme-color" content="#1c1b18">
+<title>Kulture</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#1c1b18;--bg2:#242320;--bg3:#2e2d29;
+  --cream:#f0e9d8;--cream-dim:#c8b99a;
+  --accent:#c4673a;--accent2:#e8954a;--gold:#d4a843;
+  --green:#5ab87a;--red:#e07070;
+  --text:#e8e0d0;--text-dim:#9a9082;
+  --border:rgba(255,255,255,0.08);
+  --radius:14px;--radius-sm:8px;
+  --font-d:'Playfair Display',Georgia,serif;
+  --font-b:'Lora',Georgia,serif;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font-b);min-height:100dvh;overflow-x:hidden;-webkit-tap-highlight-color:transparent;}
+
+.app-header{position:sticky;top:0;z-index:100;background:rgba(28,27,24,0.93);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:calc(var(--safe-top) + 12px) 16px 10px;}
+.header-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.app-title{font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--cream);flex:1;}
+.app-title span{color:var(--accent);}
+.header-actions{display:flex;gap:6px;}
+.btn-icon{background:var(--bg3);border:1px solid var(--border);color:var(--cream-dim);width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;transition:all 0.2s;flex-shrink:0;}
+.btn-icon:active,.btn-icon:hover{color:var(--cream);border-color:var(--accent);}
+.search-wrap{position:relative;}
+.search-input{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-b);font-size:15px;padding:9px 14px 9px 36px;border-radius:10px;outline:none;transition:border-color 0.2s;}
+.search-input:focus{border-color:var(--accent);}
+.search-input::placeholder{color:var(--text-dim);}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:14px;pointer-events:none;}
+
+.sync-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;border-bottom:1px solid var(--border);font-size:12px;min-height:32px;}
+.sync-status{display:flex;align-items:center;gap:6px;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:background 0.3s;}
+.sync-dot.ok{background:var(--green);box-shadow:0 0 6px rgba(90,184,122,0.5);}
+.sync-dot.syncing{background:var(--gold);animation:pulse 1s ease-in-out infinite;}
+.sync-dot.error{background:var(--red);}
+.sync-dot.offline{background:var(--text-dim);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.sync-label{color:var(--text-dim);}
+.sync-btn{font-size:11px;color:var(--accent2);background:none;border:none;cursor:pointer;padding:2px 6px;}
+.sync-btn:hover{color:var(--cream);}
+
+.filters-row{display:flex;gap:8px;padding:10px 16px 4px;overflow-x:auto;scrollbar-width:none;}
+.filters-row::-webkit-scrollbar{display:none;}
+.filter-chip{background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);font-family:var(--font-b);font-size:13px;padding:5px 14px;border-radius:20px;cursor:pointer;white-space:nowrap;transition:all 0.2s;flex-shrink:0;}
+.filter-chip.active{background:var(--accent);border-color:var(--accent);color:white;}
+
+.stats-bar{padding:4px 16px 2px;font-size:12px;color:var(--text-dim);letter-spacing:0.5px;}
+
+/* ── FILTER BAR ── */
+.filter-bar{padding:8px 12px 6px;border-bottom:1px solid var(--border);}
+.filter-selects-row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;align-items:center;}
+.filter-selects-row::-webkit-scrollbar{display:none;}
+.f-select{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-b);font-size:12px;padding:6px 28px 6px 10px;border-radius:20px;outline:none;cursor:pointer;appearance:none;flex-shrink:0;transition:border-color 0.2s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239a9082'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;}
+.f-select:focus{border-color:var(--accent);}
+.f-select.active{border-color:var(--accent);color:var(--accent2);}
+.f-select.genre-active{border-color:var(--gold);color:var(--gold);}
+.filter-reset{background:none;border:1px solid var(--border);color:var(--text-dim);font-family:var(--font-b);font-size:11px;padding:5px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.2s;}
+.filter-reset:hover{border-color:var(--red);color:var(--red);}
+.filter-active-badge{background:rgba(196,103,58,0.2);border:1px solid var(--accent);color:var(--accent2);font-size:10px;padding:2px 7px;border-radius:10px;margin-left:4px;}
+/* keep old chip classes for genre chips below filter bar */
+.chips-scroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 0 2px;}
+.chips-scroll::-webkit-scrollbar{display:none;}
+.chip{background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);font-family:var(--font-b);font-size:12px;padding:4px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;transition:all 0.18s;flex-shrink:0;}
+.chip.active{background:var(--accent);border-color:var(--accent);color:white;}
+.chip.genre-chip.active{background:var(--gold);border-color:var(--gold);color:#1c1b18;}
+
+.library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;padding:12px 12px calc(var(--safe-bottom) + 80px);}
+@media(min-width:600px){.library-grid{grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:16px;padding:14px 20px 100px;}}
+/* ── List view ── */
+.library-grid.list-view{display:flex;flex-direction:column;gap:0;padding:0 0 calc(var(--safe-bottom)+80px);}
+.list-item{display:grid;grid-template-columns:42px 1fr 1fr 1fr 80px 36px;align-items:center;gap:0;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;background:var(--bg2);min-height:44px;}
+.list-item:first-child{border-top:1px solid var(--border);}
+.list-item:hover,.list-item:active{background:var(--bg3);}
+/* Table header row */
+.list-header{display:grid;grid-template-columns:42px 1fr 1fr 1fr 80px 36px;align-items:center;gap:0;border-bottom:2px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:5;padding:0;}
+.list-header-cell{font-size:9px;text-transform:uppercase;letter-spacing:0.9px;color:var(--text-dim);padding:7px 10px;}
+.list-thumb{width:42px;height:100%;min-height:44px;flex-shrink:0;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.list-thumb img{width:42px;height:100%;min-height:44px;object-fit:cover;}
+.list-thumb .cover-placeholder{display:flex;align-items:center;justify-content:center;width:42px;min-height:44px;}
+.list-thumb .cover-placeholder .icon{font-size:18px;}
+.list-thumb .cover-placeholder .lbl{display:none;}
+.list-cell{padding:8px 10px;min-width:0;overflow:hidden;}
+.list-title{font-family:var(--font-d);font-size:13px;font-weight:600;color:var(--cream);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+.list-author{font-size:11px;color:var(--text-dim);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;margin-top:1px;}
+.list-col-text{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+.list-col-dim{font-size:11px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;margin-top:1px;}
+.list-type-badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:10px;color:var(--gold);background:rgba(212,168,67,0.12);white-space:nowrap;}
+.list-genre-badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:10px;color:var(--accent2);background:rgba(232,149,74,0.1);white-space:nowrap;margin-top:2px;}
+.list-read-col{padding:0 6px;display:flex;align-items:center;justify-content:center;}
+.list-read-btn{width:26px;height:26px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;flex-shrink:0;}
+.list-read-btn.read{background:var(--green);}
+.list-read-btn.unread{background:var(--bg3);box-shadow:inset 0 0 0 1.5px rgba(200,195,185,0.2);}
+.list-read-btn.read::after{content:'✓';font-weight:700;font-size:13px;color:#fff;}
+.list-read-btn.unread::after{content:'✓';font-weight:700;font-size:13px;color:rgba(200,195,185,0.3);}
+.list-read-btn:hover{transform:scale(1.12);}
+@media(max-width:480px){
+  .list-item,.list-header{grid-template-columns:42px 1fr 1fr 26px;}
+  .list-col-hidden{display:none;}
+}
+/* View toggle button active state */
+.btn-icon.active{background:rgba(196,103,58,0.2);border-color:var(--accent);color:var(--accent2);}
+
+.book-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;box-shadow:0 4px 24px rgba(0,0,0,0.4);}
+.book-card:active{transform:scale(0.97);}
+.book-card:hover{border-color:rgba(196,103,58,0.4);}
+.book-cover{width:100%;aspect-ratio:2/3;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+.book-cover img{width:100%;height:100%;object-fit:cover;}
+.read-btn{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:all 0.2s;z-index:2;flex-shrink:0;border:none;padding:0;}
+.read-btn:hover{transform:scale(1.15);}
+/* Sur couverture image : fond sombre semi-transparent, coche visible */
+.has-cover .read-btn.unread{background:rgba(60,58,52,0.72);backdrop-filter:blur(4px);box-shadow:0 1px 4px rgba(0,0,0,0.4);}
+.has-cover .read-btn.unread::after{content:'✓';color:rgba(200,195,185,0.55);font-size:14px;font-weight:700;line-height:1;}
+.has-cover .read-btn.read{background:rgba(90,184,122,0.82);backdrop-filter:blur(4px);box-shadow:0 1px 6px rgba(90,184,122,0.4);}
+.has-cover .read-btn.read::after{content:'✓';color:#fff;font-size:14px;font-weight:700;line-height:1;}
+/* Sur placeholder (pas d'image) : fond légèrement plus clair que bg3 */
+.no-cover .read-btn.unread{background:#3a3935;box-shadow:inset 0 0 0 1.5px rgba(200,195,185,0.18);}
+.no-cover .read-btn.unread::after{content:'✓';color:rgba(200,195,185,0.35);font-size:14px;font-weight:700;line-height:1;}
+.no-cover .read-btn.read{background:var(--green);box-shadow:0 1px 6px rgba(90,184,122,0.45);}
+.no-cover .read-btn.read::after{content:'✓';color:#fff;font-size:14px;font-weight:700;line-height:1;}
+.cover-placeholder{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-dim);}
+.cover-placeholder .icon{font-size:28px;}
+.cover-placeholder .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;}
+.type-badge{position:absolute;top:7px;left:7px;background:rgba(28,27,24,0.85);backdrop-filter:blur(6px);border-radius:5px;padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--gold);}
+.book-info{padding:9px 10px 11px;}
+.book-title{font-family:var(--font-d);font-size:13px;font-weight:600;color:var(--cream);line-height:1.3;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.book-author{font-size:11px;color:var(--text-dim);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.book-series{margin-top:4px;font-size:10px;color:var(--accent2);}
+.book-read-date{margin-top:3px;font-size:10px;color:var(--green);}
+
+.empty-state{text-align:center;padding:50px 24px;grid-column:1/-1;}
+.empty-state .icon{font-size:48px;margin-bottom:14px;opacity:0.35;}
+.empty-state h3{font-family:var(--font-d);font-size:20px;color:var(--cream-dim);margin-bottom:8px;}
+.empty-state p{font-size:13px;color:var(--text-dim);line-height:1.6;}
+
+.fab{position:fixed;bottom:calc(var(--safe-bottom) + 22px);right:18px;z-index:200;background:var(--accent);color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;box-shadow:0 4px 20px rgba(196,103,58,0.5);border:none;transition:transform 0.2s,box-shadow 0.2s;}
+.fab:active{transform:scale(0.92);}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:300;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-height:92dvh;overflow-y:auto;padding-bottom:calc(var(--safe-bottom) + 20px);transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.34,1.1,0.64,1);}
+.modal-overlay.open .modal{transform:translateY(0);}
+@media(min-width:600px){.modal-overlay{align-items:center;}.modal{border-radius:22px;max-width:540px;margin:auto;max-height:88dvh;}}
+.modal-handle{width:38px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);}
+.modal-title{font-family:var(--font-d);font-size:19px;font-weight:600;color:var(--cream);}
+.btn-close{background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;}
+.btn-close:hover{color:var(--cream);}
+
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 18px;}
+.tab{font-family:var(--font-b);font-size:13px;color:var(--text-dim);padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}
+.tab.active{color:var(--accent2);border-bottom-color:var(--accent);}
+
+.form-body{padding:18px;display:flex;flex-direction:column;gap:14px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);}
+.form-input,.form-select,.form-textarea{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-b);font-size:15px;padding:10px 13px;border-radius:var(--radius-sm);outline:none;width:100%;transition:border-color 0.2s;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);}
+.form-textarea{resize:vertical;min-height:76px;}
+.form-select{appearance:none;cursor:pointer;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+.type-selector{display:flex;gap:6px;flex-wrap:wrap;}
+.type-btn{flex:1;min-width:calc(33% - 6px);padding:8px 6px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text-dim);font-family:var(--font-b);font-size:11px;cursor:pointer;text-align:center;transition:all 0.2s;}
+.type-btn.active{background:rgba(196,103,58,0.15);border-color:var(--accent);color:var(--accent2);}
+
+.photo-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px 18px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
+.photo-zone:hover,.photo-zone.dragover{border-color:var(--accent);background:rgba(196,103,58,0.05);}
+.photo-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.photo-zone .iz{font-size:34px;margin-bottom:8px;}
+.photo-zone p{font-size:13px;color:var(--text-dim);}
+.photo-zone p strong{color:var(--accent2);}
+.photo-preview{position:relative;border-radius:var(--radius);overflow:hidden;}
+.photo-preview img{width:100%;max-height:200px;object-fit:cover;display:block;border-radius:var(--radius);}
+.remove-photo{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);color:white;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;}
+
+.info-box{border-radius:var(--radius-sm);padding:11px 13px;font-size:12px;line-height:1.55;}
+.info-box.gold{background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.25);color:var(--gold);}
+.info-box.orange{background:rgba(196,103,58,0.08);border:1px solid rgba(196,103,58,0.25);color:var(--accent2);}
+.info-box.green{background:rgba(90,184,122,0.08);border:1px solid rgba(90,184,122,0.25);color:var(--green);}
+.info-box a{color:var(--accent2);}
+
+.analysis-result{background:rgba(196,103,58,0.07);border:1px solid rgba(196,103,58,0.2);border-radius:var(--radius-sm);padding:12px;}
+.analysis-result h4{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent2);margin-bottom:9px;}
+.ai{display:flex;gap:8px;font-size:12px;margin-bottom:5px;}
+.ai .k{color:var(--text-dim);min-width:80px;}
+.ai .v{color:var(--cream);flex:1;}
+
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.btn{font-family:var(--font-b);font-size:14px;padding:12px 18px;border-radius:var(--radius-sm);cursor:pointer;border:none;transition:all 0.2s;text-align:center;font-weight:500;}
+.btn-primary{background:var(--accent);color:white;width:100%;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-secondary{background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);}
+.btn-secondary:hover{color:var(--cream);}
+.btn-danger{background:rgba(200,60,60,0.12);border:1px solid rgba(200,60,60,0.3);color:var(--red);}
+.btn-outline{background:transparent;border:1px solid var(--accent);color:var(--accent2);width:100%;}
+.btn-outline:hover{background:rgba(196,103,58,0.1);}
+.btn-sm{font-size:12px;padding:7px 12px;}
+.btn-search{background:var(--bg3);border:1px solid var(--accent);color:var(--accent2);font-family:var(--font-b);font-size:13px;padding:0 14px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;transition:all 0.2s;flex-shrink:0;}
+.btn-search:hover{background:rgba(196,103,58,0.15);color:var(--cream);}
+.btn-search:disabled{opacity:0.5;cursor:not-allowed;}
+.search-result-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;padding:2px 0;}
+.search-result-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;transition:all 0.18s;}
+.search-result-item:hover{border-color:var(--accent);background:rgba(196,103,58,0.08);}
+.sri-title{font-family:var(--font-d);font-size:13px;color:var(--cream);margin-bottom:3px;}
+.sri-meta{font-size:11px;color:var(--text-dim);font-style:italic;}
+.sri-source{font-size:10px;color:var(--accent2);margin-top:4px;text-transform:uppercase;letter-spacing:0.6px;}
+.search-result-header{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin-bottom:8px;}
+.cover-input-wrap{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+.cover-input-tabs{display:flex;border-bottom:1px solid var(--border);}
+.cover-tab{flex:1;background:var(--bg3);border:none;color:var(--text-dim);font-family:var(--font-b);font-size:12px;padding:7px;cursor:pointer;transition:all 0.2s;}
+.cover-tab.active{background:rgba(196,103,58,0.12);color:var(--accent2);}
+.cover-tab-panel{padding:10px;}
+.cover-drop-zone{border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;min-height:80px;display:flex;align-items:center;justify-content:center;}
+.cover-drop-zone:hover{border-color:var(--accent);background:rgba(196,103,58,0.05);}
+.cover-drop-zone.has-image{border-style:solid;border-color:var(--accent);}
+
+.detail-cover{width:100%;max-height:240px;object-fit:cover;display:block;}
+.detail-cover-placeholder{width:100%;height:140px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:44px;}
+.detail-body{padding:18px;}
+.detail-type{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:5px;}
+.detail-title{font-family:var(--font-d);font-size:24px;font-weight:700;color:var(--cream);line-height:1.2;margin-bottom:6px;}
+.detail-author{font-size:15px;color:var(--cream-dim);font-style:italic;margin-bottom:14px;}
+.detail-meta{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.detail-meta-row{display:flex;gap:10px;font-size:13px;}
+.detail-meta-row .key{color:var(--text-dim);min-width:110px;}
+.detail-meta-row .val{color:var(--text);flex:1;}
+.detail-notes{background:var(--bg3);border-radius:var(--radius-sm);padding:12px;font-size:13px;color:var(--text-dim);line-height:1.6;font-style:italic;margin-bottom:14px;}
+.detail-actions{display:flex;gap:9px;}
+
+.settings-section{padding:14px 18px;border-bottom:1px solid var(--border);}
+.settings-section h3{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin-bottom:11px;}
+/* Profile */
+.profile-avatar-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px;}
+.profile-avatar{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden;cursor:pointer;transition:border-color 0.2s;flex-shrink:0;}
+.profile-avatar:hover{border-color:var(--accent2);}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;}
+.profile-avatar-btns{display:flex;gap:6px;}
+/* Advanced settings accordion */
+.adv-details{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:0;}
+.adv-details+.adv-details{margin-top:8px;}
+.adv-summary{padding:11px 14px;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;background:var(--bg3);user-select:none;}
+.adv-summary::-webkit-details-marker{display:none;}
+.adv-summary::after{content:'›';margin-left:auto;font-size:16px;transition:transform 0.2s;}
+details[open] .adv-summary::after{transform:rotate(90deg);}
+.adv-summary:hover{color:var(--text);}
+.adv-body{padding:14px;}
+
+/* ── EXCEL IMPORT ── */
+.xl-drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px 18px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
+.xl-drop-zone:hover,.xl-drop-zone.dragover{border-color:var(--green);background:rgba(90,184,122,0.05);}
+.xl-drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.xl-map-grid{display:grid;grid-template-columns:1fr 32px 1fr;gap:0 8px;align-items:center;margin:12px 0;}
+.xl-map-label{font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-dim);padding:4px 0 6px;grid-column:1/-1;display:grid;grid-template-columns:1fr 32px 1fr;gap:0 8px;}
+.xl-field-slot{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 10px;font-size:12px;color:var(--text-dim);min-height:38px;display:flex;align-items:center;gap:6px;}
+.xl-field-slot .field-name{color:var(--cream);font-weight:600;}
+.xl-field-slot.required .field-name::after{content:' *';color:var(--accent);}
+.xl-arrow{text-align:center;color:var(--text-dim);font-size:18px;line-height:38px;}
+.xl-col-chip{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;color:var(--cream);cursor:grab;display:flex;align-items:center;gap:5px;transition:all 0.15s;user-select:none;white-space:nowrap;}
+.xl-col-chip:active{cursor:grabbing;opacity:0.7;}
+.xl-col-chip.dragging{opacity:0.4;border-style:dashed;}
+.xl-col-chip.mapped{background:rgba(90,184,122,0.1);border-color:var(--green);color:var(--green);}
+.xl-drop-target{background:var(--bg3);border:2px dashed var(--border);border-radius:var(--radius-sm);padding:7px 10px;min-height:38px;font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:6px;transition:all 0.2s;}
+.xl-drop-target.over{border-color:var(--accent);background:rgba(196,103,58,0.08);}
+.xl-drop-target.filled{border-style:solid;border-color:var(--green);background:rgba(90,184,122,0.07);color:var(--green);}
+.xl-drop-target .chip-in{background:rgba(90,184,122,0.15);border:1px solid var(--green);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px;}
+.xl-drop-target .chip-in button{background:none;border:none;color:var(--green);cursor:pointer;font-size:13px;padding:0;line-height:1;}
+.xl-col-pool{display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);min-height:44px;}
+.xl-preview-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;}
+.xl-preview-table th{background:var(--bg3);color:var(--text-dim);padding:5px 8px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+.xl-preview-table td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.xl-step{display:none;} .xl-step.active{display:block;}
+.xl-stepper{display:flex;gap:0;margin-bottom:16px;}
+.xl-step-btn{flex:1;padding:8px;font-size:11px;font-family:var(--font-b);background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);cursor:default;}
+.xl-step-btn:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm);}
+.xl-step-btn:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0;}
+.xl-step-btn.active{background:var(--accent);border-color:var(--accent);color:white;}
+.xl-step-btn.done{background:rgba(90,184,122,0.15);border-color:var(--green);color:var(--green);}
+.step-list{display:flex;flex-direction:column;gap:9px;}
+.step{display:flex;gap:10px;font-size:13px;color:var(--text-dim);line-height:1.5;}
+.step-num{background:var(--accent);color:white;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.step strong{color:var(--text);}
+
+.sql-block{font-size:10px;background:rgba(0,0,0,0.35);padding:8px 10px;border-radius:6px;display:block;margin-top:6px;white-space:pre-wrap;color:var(--cream);font-family:monospace;line-height:1.5;}
+
+.toast{position:fixed;bottom:calc(var(--safe-bottom) + 85px);left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 16px;font-size:13px;color:var(--text);z-index:999;opacity:0;transition:opacity 0.3s,transform 0.3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.success{border-color:rgba(90,184,122,0.4);}
+.toast.error{border-color:rgba(200,70,70,0.4);color:var(--red);}
+
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* ── AUTH SCREEN ── */
+.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;}
+.auth-card{background:var(--bg2);border:1px solid var(--border);border-radius:22px;width:100%;max-width:400px;padding:32px 28px;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
+.auth-logo{text-align:center;margin-bottom:24px;}
+.auth-logo .icon{font-size:48px;margin-bottom:10px;}
+.auth-logo h1{font-family:var(--font-d);font-size:26px;font-weight:700;color:var(--cream);}
+.auth-logo h1 span{color:var(--accent);}
+.auth-logo p{font-size:13px;color:var(--text-dim);margin-top:4px;}
+.auth-tabs{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:22px;}
+.auth-tab{flex:1;padding:9px;text-align:center;font-family:var(--font-b);font-size:13px;color:var(--text-dim);cursor:pointer;background:transparent;border:none;transition:all 0.2s;}
+.auth-tab.active{background:var(--accent);color:white;}
+.auth-form{display:flex;flex-direction:column;gap:14px;}
+.auth-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-b);font-size:15px;padding:12px 14px;border-radius:var(--radius-sm);outline:none;width:100%;transition:border-color 0.2s;}
+.auth-input:focus{border-color:var(--accent);}
+.auth-input::placeholder{color:var(--text-dim);}
+.auth-submit{background:var(--accent);color:white;font-family:var(--font-b);font-size:15px;font-weight:600;padding:13px;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.2s;width:100%;}
+.auth-submit:hover{background:var(--accent2);}
+.auth-submit:disabled{opacity:0.5;cursor:not-allowed;}
+.auth-msg{font-size:13px;text-align:center;padding:10px 14px;border-radius:var(--radius-sm);line-height:1.5;}
+.auth-msg.success{background:rgba(90,184,122,0.1);border:1px solid rgba(90,184,122,0.3);color:var(--green);}
+.auth-msg.error{background:rgba(220,70,70,0.1);border:1px solid rgba(220,70,70,0.3);color:var(--red);}
+.auth-forgot{background:none;border:none;color:var(--text-dim);font-family:var(--font-b);font-size:12px;cursor:pointer;text-align:right;padding:0;}
+.auth-forgot:hover{color:var(--accent2);}
+.auth-config{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+.auth-config summary{font-size:12px;color:var(--text-dim);cursor:pointer;user-select:none;}
+.auth-config summary:hover{color:var(--text);}
+.auth-config-body{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+
+/* ── USER BAR ── */
+.user-bar{display:flex;align-items:center;justify-content:space-between;padding:5px 16px;border-bottom:1px solid var(--border);font-size:12px;background:rgba(196,103,58,0.05);}
+.user-email{color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-email strong{color:var(--accent2);}
+.btn-signout{background:none;border:none;color:var(--text-dim);font-size:11px;cursor:pointer;padding:3px 8px;border-radius:6px;transition:all 0.2s;}
+.btn-signout:hover{color:var(--red);background:rgba(200,70,70,0.1);}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
+/* Selection mode */
+.sel-list-view{display:grid;width:100%;}
+.sel-list-header,.sel-list-item{display:grid;grid-template-columns:44px 42px 2fr 1.2fr 1fr 1fr 1fr 60px 100px;align-items:center;gap:0;border-bottom:1px solid var(--border);min-height:44px;}
+.sel-list-header{background:var(--bg3);font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-dim);position:sticky;top:calc(var(--safe-top) + 112px);z-index:10;}
+.sel-list-item:hover{background:rgba(196,103,58,0.06);}
+.sel-list-item.selected{background:rgba(196,103,58,0.12);border-left:3px solid var(--accent);}
+.sel-chk-cell{display:flex;align-items:center;justify-content:center;padding:0 6px;}
+.sel-chk-box{width:18px;height:18px;border-radius:4px;border:2px solid var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+.sel-chk-box.checked{background:var(--accent);border-color:var(--accent);}
+.sel-chk-box.checked::after{content:'✓';font-size:11px;color:white;font-weight:700;}
+.sel-thumb{width:30px;height:44px;object-fit:cover;display:block;}
+.sel-thumb-ph{width:30px;height:44px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;}
+.sel-cell{padding:0 8px;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sel-cell.title{font-family:var(--font-d);color:var(--cream);}
+.sel-cell.dim{color:var(--text-dim);font-size:11px;}
+@media(max-width:639px){
+  .sel-list-header,.sel-list-item{grid-template-columns:44px 38px 1fr 80px;}
+  .sel-col-author,.sel-col-series,.sel-col-genre,.sel-col-pub,.sel-col-year{display:none;}
+}
+/* ── FRIENDS ── */
+.friends-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.friends-tab{flex:1;padding:10px 6px;font-size:12px;font-family:var(--font-b);color:var(--text-dim);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;text-align:center;}
+.friends-tab.active{color:var(--accent2);border-bottom-color:var(--accent);}
+.friend-card{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.friend-card:last-child{border-bottom:none;}
+.friend-avatar{width:38px;height:38px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden;}
+.friend-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.friend-info{flex:1;min-width:0;}
+.friend-name{font-size:14px;font-weight:600;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.friend-email{font-size:11px;color:var(--text-dim);}
+.friend-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn-sm{font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text-dim);cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.btn-sm:hover{border-color:var(--accent);color:var(--cream);}
+.btn-sm.primary{background:var(--accent);border-color:var(--accent);color:white;}
+.btn-sm.primary:hover{background:var(--accent2);border-color:var(--accent2);}
+.btn-sm.danger{border-color:var(--red);color:var(--red);}
+.btn-sm.danger:hover{background:rgba(224,112,112,0.15);}
+.friends-empty{text-align:center;color:var(--text-dim);font-size:13px;padding:24px 0;}
+.friend-search-row{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.pending-badge{display:inline-block;background:var(--accent);color:white;border-radius:50%;width:17px;height:17px;font-size:10px;font-weight:700;line-height:17px;text-align:center;position:absolute;top:-5px;right:-5px;}
+.btn-icon-wrap{position:relative;}
+/* ── FRIEND LIBRARY OVERLAY ── */
+.friend-lib-bar{display:none;align-items:center;gap:10px;padding:10px 14px;background:rgba(196,103,58,0.12);border-bottom:1px solid var(--accent);font-size:13px;color:var(--cream-dim);}
+.friend-lib-bar.visible{display:flex;}
+.friend-lib-name{font-weight:600;color:var(--accent2);flex:1;}
+.fl-import-btn{font-size:11px;padding:4px 10px;border-radius:8px;border:none;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.fl-import-btn.import{background:rgba(90,184,122,0.15);color:var(--green);border:1px solid var(--green);}
+.fl-import-btn.import:hover{background:rgba(90,184,122,0.3);}
+.fl-import-btn.import-read{background:rgba(196,103,58,0.15);color:var(--accent2);border:1px solid var(--accent);}
+.fl-import-btn.import-read:hover{background:rgba(196,103,58,0.25);}
+/* card overlay for friend view */
+.book-card.friend-book .book-cover::after{content:'';position:absolute;inset:0;background:rgba(196,103,58,0.06);}
+.book-card.friend-book .read-btn{display:none;}
+
+/* ── STATS ── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 12px;display:flex;flex-direction:column;gap:4px;}
+.stat-card.accent{border-color:var(--accent);background:rgba(196,103,58,0.08);}
+.stat-card.green{border-color:var(--green);background:rgba(90,184,122,0.07);}
+.stat-card.gold{border-color:var(--gold);background:rgba(212,168,67,0.07);}
+.stat-card.wide{grid-column:1/-1;}
+.stat-num{font-family:var(--font-d);font-size:28px;font-weight:700;color:var(--cream);line-height:1;}
+.stat-num.accent{color:var(--accent2);}
+.stat-num.green{color:var(--green);}
+.stat-num.gold{color:var(--gold);}
+.stat-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.7px;}
+.stat-section-title{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin:0 0 8px;}
+.stat-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.stat-bar-label{font-size:12px;color:var(--text);min-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stat-bar-track{flex:1;height:7px;background:var(--bg3);border-radius:4px;overflow:hidden;}
+.stat-bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width 0.6s ease;}
+.stat-bar-val{font-size:11px;color:var(--text-dim);min-width:24px;text-align:right;}
+.stat-year-row{display:flex;align-items:flex-end;gap:3px;height:60px;margin-bottom:4px;}
+.stat-year-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:default;}
+.stat-year-bar{width:100%;border-radius:2px 2px 0 0;background:var(--accent);min-height:2px;transition:height 0.5s ease;}
+.stat-year-lbl{font-size:8px;color:var(--text-dim);writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;}
+.stat-empty{text-align:center;color:var(--text-dim);font-size:13px;padding:20px 0;}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="icon">📚</div>
+      <h1>K<span>ulture</span></h1>
+      <p>Le dernier rempart contre la barbarie</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Connexion</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Créer un compte</button>
+    </div>
+
+    <div class="auth-form">
+      <input class="auth-input" type="email" id="authEmail" placeholder="Adresse email" autocomplete="email">
+      <input class="auth-input" type="password" id="authPassword" placeholder="Mot de passe" autocomplete="current-password">
+      <input class="auth-input" type="password" id="authPasswordConfirm" placeholder="Confirmer le mot de passe" style="display:none" autocomplete="new-password">
+      <button class="auth-forgot" id="authForgotBtn" onclick="handleForgotPassword()">Mot de passe oublié ?</button>
+      <button class="auth-submit" id="authSubmitBtn" onclick="handleAuth()">Se connecter</button>
+      <div id="authMsg" style="display:none"></div>
+    </div>
+
+    <details class="auth-config" id="authConfig">
+      <summary>⚙️ Configuration Supabase</summary>
+      <div class="auth-config-body">
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Requis une seule fois. Obtenez ces valeurs sur <span style="color:var(--accent2)">supabase.com</span> → Project Settings → API</div>
+        <input class="auth-input" style="font-size:13px;padding:9px 12px;" type="text" id="authSbUrl" placeholder="URL du projet (https://xxx.supabase.co)">
+        <input class="auth-input" style="font-size:13px;padding:9px 12px;" type="password" id="authSbKey" placeholder="Clé anon (eyJhbGci…)">
+        <button class="auth-submit" style="font-size:13px;padding:10px;" onclick="saveAuthConfig()">Enregistrer</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- USER BAR (shown when logged in) -->
+<div class="user-bar" id="userBar" style="display:none">
+  <div class="user-email" id="userEmail" style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden;cursor:pointer;" onclick="openSettings()"></div>
+  <button class="btn-signout" onclick="handleSignOut()">Déconnexion</button>
+</div>
+
+<header class="app-header" style="display:none">
+  <div class="header-row">
+    <div class="app-title">K<span>ulture</span></div>
+    <div class="header-actions">
+      <button class="btn-icon" id="viewToggleBtn" onclick="toggleViewMode()" title="Changer l'affichage">
+        <svg id="viewToggleIcon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+        </svg>
+      </button>
+      <button class="btn-icon" id="selectModeBtn" onclick="toggleSelectMode()" title="Mode sélection">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="5" width="4" height="4" rx="1"/><line x1="10" y1="7" x2="21" y2="7"/>
+          <rect x="3" y="12" width="4" height="4" rx="1"/><line x1="10" y1="14" x2="21" y2="14"/>
+          <rect x="3" y="19" width="4" height="4" rx="1"/><line x1="10" y1="21" x2="21" y2="21"/>
+        </svg>
+      </button>
+      <button class="btn-icon" onclick="syncNow()" title="Synchroniser">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.36-2.64L3 21"/>
+          <path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.36 2.64L21 3"/>
+          <polyline points="21 3 21 9 15 9"/>
+          <polyline points="3 21 3 15 9 15"/>
+        </svg>
+      </button>
+      <div class="btn-icon-wrap">
+        <button class="btn-icon" id="friendsBtn" onclick="openFriends()" title="Amis">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </button>
+        <span class="pending-badge" id="pendingBadge" style="display:none">0</span>
+      </div>
+      <button class="btn-icon" onclick="openStats()" title="Statistiques">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+          <line x1="2" y1="20" x2="22" y2="20"/>
+        </svg>
+      </button>
+      <button class="btn-icon" onclick="openSettings()" title="Paramètres">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" type="search" placeholder="Titre, auteur, série…" id="searchInput" oninput="filterBooks()">
+  </div>
+</header>
+
+<div class="sync-bar" style="display:none">
+  <div class="sync-status">
+    <div class="sync-dot offline" id="syncDot"></div>
+    <span class="sync-label" id="syncLabel">Non configuré</span>
+  </div>
+
+</div>
+
+<div class="friend-lib-bar" id="friendLibBar">
+  <span>👁 Vous consultez la bibliothèque de</span>
+  <span class="friend-lib-name" id="friendLibName"></span>
+  <button class="btn-sm" onclick="exitFriendView()">← Ma bibliothèque</button>
+</div>
+
+<div class="filter-bar" id="filterBar" style="display:none">
+  <div class="filter-selects-row">
+
+    <!-- Sort: date -->
+    <select class="f-select" id="sortDate" onchange="applyFilters()">
+      <option value="none">📅 Date d'ajout</option>
+      <option value="date_desc">📅 Date ajout ↓</option>
+      <option value="date_asc">📅 Date ajout ↑</option>
+    </select>
+
+    <!-- Sort: title -->
+    <select class="f-select" id="sortTitle" onchange="applyFilters()">
+      <option value="none">🔤 Titre</option>
+      <option value="alpha_asc">🔤 Titre A → Z</option>
+      <option value="alpha_desc">🔤 Titre Z → A</option>
+    </select>
+
+    <!-- Sort: author -->
+    <select class="f-select" id="sortAuthor" onchange="applyFilters()">
+      <option value="none">👤 Auteur</option>
+      <option value="author_asc">👤 Auteur A → Z</option>
+      <option value="author_desc">👤 Auteur Z → A</option>
+    </select>
+
+    <!-- Sort: year -->
+    <select class="f-select" id="sortYear" onchange="applyFilters()">
+      <option value="none">📆 Année de sortie</option>
+      <option value="year_desc">📆 Année ↓</option>
+      <option value="year_asc">📆 Année ↑</option>
+    </select>
+
+    <!-- Category -->
+    <select class="f-select" id="catSelect" onchange="applyFilters()">
+      <option value="all">📚 Catégorie</option>
+      <option value="bd">📚 BD</option>
+      <option value="roman">📖 Roman</option>
+      <option value="manga">🇯🇵 Manga</option>
+      <option value="novella">📕 Novella</option>
+      <option value="nouvelle">📄 Nouvelle</option>
+      <option value="inconnu">❓ À renseigner</option>
+    </select>
+
+    <!-- Genre (dynamic) -->
+    <select class="f-select" id="genreSelect" onchange="applyFilters()">
+      <option value="all">🏷 Genre</option>
+    </select>
+
+    <!-- Sort: read date -->
+    <select class="f-select" id="sortReadDate" onchange="applyFilters()">
+      <option value="none">📖 Date de lecture</option>
+      <option value="read_desc">📖 Lu récemment ↓</option>
+      <option value="read_asc">📖 Lu anciennement ↑</option>
+      <option value="read_set">📖 Lu (tous)</option>
+      <option value="read_none">📖 Non lu</option>
+    </select>
+
+    <!-- Reset -->
+    <button class="filter-reset" id="filterResetBtn" onclick="resetFilters()" style="display:none">✕ Réinitialiser</button>
+
+  </div>
+</div>
+<div class="stats-bar" id="statsBar" style="display:none"></div>
+<div class="library-grid" id="libraryGrid" style="display:none"></div>
+<button class="fab" onclick="openAddModal()" style="display:none">+</button>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="addModalTitle">Ajouter un titre</div>
+      <button class="btn-close" onclick="closeModal('addModal')">✕</button>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('manual')">✏️ Manuel</div>
+      <div class="tab" onclick="switchTab('photo')">📷 Photo / IA</div>
+    </div>
+    <div class="tab-panel active" id="tab-manual">
+      <div class="form-body">
+        <div class="form-group">
+          <div class="form-label">Type</div>
+          <div class="type-selector">
+            <button class="type-btn active" data-type="bd" onclick="selectType('bd',this)">📚 BD</button>
+            <button class="type-btn" data-type="roman" onclick="selectType('roman',this)">📖 Roman</button>
+            <button class="type-btn" data-type="manga" onclick="selectType('manga',this)">🇯🇵 Manga</button>
+            <button class="type-btn" data-type="novella" onclick="selectType('novella',this)">📕 Novella</button>
+            <button class="type-btn" data-type="nouvelle" onclick="selectType('nouvelle',this)">📄 Nouvelle</button>
+            <button class="type-btn" data-type="inconnu" onclick="selectType('inconnu',this)">❓ À renseigner</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Titre *</div>
+          <div style="display:flex;gap:8px;align-items:stretch;">
+            <input class="form-input" id="f-title" placeholder="Titre de l'ouvrage" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();searchByTitle();}">
+            <button class="btn-search" id="searchTitleBtn" onclick="searchByTitle()">🔍 Chercher</button>
+          </div>
+        </div>
+        <div id="searchSpinner" style="display:none;text-align:center;padding:8px 0;">
+          <div class="spinner" style="margin:0 auto 5px;"></div>
+          <div style="font-size:12px;color:var(--text-dim)">Recherche en cours…</div>
+        </div>
+        <div id="searchResults" style="display:none;"></div>
+        <div class="form-group">
+          <div class="form-label">ISBN (recherche directe)</div>
+          <div style="display:flex;gap:8px;align-items:stretch;">
+            <input class="form-input" id="f-isbn" placeholder="ex: 9782205049917" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();searchByIsbn();}">
+            <button class="btn-search" id="searchIsbnBtn" onclick="searchByIsbn()">🔍 ISBN</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Auteur(s)</div>
+          <div style="display:flex;gap:8px;align-items:stretch;">
+            <input class="form-input" id="f-author" placeholder="Scénariste, dessinateur…" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();searchByAuthor();}">
+            <button class="btn-search" id="searchAuthorBtn" onclick="searchByAuthor()">🔍 Auteur</button>
+          </div>
+        </div>
+        <div id="authorSearchSpinner" style="display:none;text-align:center;padding:8px 0;">
+          <div class="spinner" style="margin:0 auto 5px;"></div>
+          <div style="font-size:12px;color:var(--text-dim)">Recherche auteur…</div>
+        </div>
+        <div id="authorSearchResults" style="display:none;"></div>
+        <div class="form-row">
+          <div class="form-group"><div class="form-label">Éditeur</div><input class="form-input" id="f-publisher" placeholder="ex: Dargaud"></div>
+          <div class="form-group"><div class="form-label">Collection</div><input class="form-input" id="f-collection" placeholder="ex: Poisson Pilote"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><div class="form-label">Série</div><input class="form-input" id="f-series" placeholder="Nom de la série"></div>
+          <div class="form-group"><div class="form-label">Tome / Vol.</div><input class="form-input" id="f-volume" type="number" min="0" placeholder="ex: 3"></div>
+        </div>
+        <div class="form-group"><div class="form-label">Année</div><input class="form-input" id="f-year" type="number" min="1800" max="2030" placeholder="ex: 2021"></div>
+        <div class="form-group"><div class="form-label">Genre</div><input class="form-input" id="f-genre" placeholder="ex: Science-fiction, Thriller, Shōnen…" list="genreList"><datalist id="genreList"></datalist></div>
+        <div class="form-group">
+          <div class="form-label">Couverture</div>
+          <div class="cover-input-wrap">
+            <div class="cover-input-tabs">
+              <button class="cover-tab active" onclick="switchCoverTab('upload',this)">📁 Fichier</button>
+              <button class="cover-tab" onclick="switchCoverTab('url',this)">🔗 URL</button>
+            </div>
+            <div id="cover-tab-upload" class="cover-tab-panel active">
+              <div class="cover-drop-zone" id="coverDropZone" onclick="document.getElementById('coverFileInput').click()">
+                <input type="file" id="coverFileInput" accept="image/*" style="display:none" onchange="handleCoverFile(event)">
+                <div id="coverPreview" style="display:none">
+                  <img id="coverPreviewImg" style="max-height:120px;border-radius:8px;object-fit:cover;">
+                  <button class="remove-photo" style="position:absolute;top:6px;right:6px;" onclick="event.stopPropagation();removeCover()">✕</button>
+                </div>
+                <div id="coverDropHint">
+                  <div style="font-size:28px;margin-bottom:6px;">🖼️</div>
+                  <div style="font-size:12px;color:var(--text-dim)">Cliquez ou glissez une image</div>
+                </div>
+              </div>
+            </div>
+            <div id="cover-tab-url" class="cover-tab-panel" style="display:none">
+              <input class="form-input" id="f-cover-url" placeholder="https://…jpg" oninput="previewCoverUrl(this.value)">
+              <div id="coverUrlPreview" style="margin-top:8px;display:none">
+                <img id="coverUrlImg" style="max-height:100px;border-radius:8px;object-fit:cover;" onerror="onCoverImgError(this)" onload="checkCoverImg(this)">
+              </div>
+              <div id="coverNotFound" style="display:none;margin-top:6px;font-size:11px;color:var(--text-dim)">⚠️ Couverture introuvable — vous pouvez coller une autre URL ou chercher par ISBN.</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group"><div class="form-label">Notes</div><textarea class="form-textarea" id="f-notes" placeholder="Vos impressions…"></textarea></div>
+        <div class="form-group"><div class="form-label">📖 Date de lecture</div><input class="form-input" id="f-readdate" type="date"></div>
+        <button class="btn btn-primary" onclick="saveManual()">Ajouter à la bibliothèque</button>
+      </div>
+    </div>
+    <div class="tab-panel" id="tab-photo">
+      <div class="form-body">
+        <div class="info-box gold" id="apiKeyBox">🔑 <strong>Clé API Claude</strong> requise.<br>
+          Configurez-la dans les <a href="#" onclick="closeModal('addModal');openSettings()">Paramètres</a>.</div>
+        <div class="photo-zone" id="photoZone">
+          <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhotoSelect(event)">
+          <div class="iz">📷</div>
+          <p><strong>Prendre ou choisir une photo</strong><br>de la couverture</p>
+        </div>
+        <div id="photoPreviewWrap" style="display:none"></div>
+        <button class="btn btn-outline" id="analyseBtn" onclick="analysePhoto()" style="display:none">✨ Analyser avec l'IA</button>
+        <div id="analyseSpinner" style="display:none;text-align:center;padding:14px 0;">
+          <div class="spinner" style="margin:0 auto 8px;"></div>
+          <div style="font-size:12px;color:var(--text-dim)">Analyse en cours…</div>
+        </div>
+        <div id="analyseResult" style="display:none"></div>
+        <div id="ocrFormWrap" style="display:none">
+          <hr class="sep">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin-bottom:10px;margin-top:4px;">Vérifier / Corriger</div>
+          <div style="display:flex;flex-direction:column;gap:11px;">
+            <div class="form-group"><div class="form-label">Titre</div><input class="form-input" id="o-title"></div>
+            <div class="form-group"><div class="form-label">Auteur(s)</div><input class="form-input" id="o-author"></div>
+            <div class="form-row">
+              <div class="form-group"><div class="form-label">Éditeur</div><input class="form-input" id="o-publisher"></div>
+              <div class="form-group"><div class="form-label">Collection</div><input class="form-input" id="o-collection"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><div class="form-label">Série</div><input class="form-input" id="o-series"></div>
+              <div class="form-group"><div class="form-label">Tome</div><input class="form-input" id="o-volume" type="number"></div>
+            </div>
+            <div class="form-group"><div class="form-label">Genre</div><input class="form-input" id="o-genre" placeholder="ex: Science-fiction, Thriller…" list="genreList"></div>
+            <div class="form-group"><div class="form-label">Type</div>
+              <select class="form-select" id="o-type">
+                <option value="bd">BD</option><option value="roman">Roman</option><option value="manga">Manga</option>
+                <option value="novella">Novella</option><option value="nouvelle">Nouvelle</option><option value="inconnu">❓ À renseigner</option>
+              </select>
+            </div>
+            <div class="form-group"><div class="form-label">📖 Date de lecture</div><input class="form-input" id="o-readdate" type="date"></div>
+            <button class="btn btn-primary" onclick="saveOcr()">Ajouter à la bibliothèque</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SELECTION TOOLBAR -->
+<div id="selToolbar" style="display:none;position:fixed;bottom:calc(var(--safe-bottom) + 22px);left:50%;transform:translateX(-50%);z-index:250;background:var(--bg2);border:1px solid var(--accent);border-radius:14px;padding:8px 14px;display:none;align-items:center;gap:10px;box-shadow:0 4px 24px rgba(0,0,0,0.5);">
+  <span id="selCount" style="font-size:13px;color:var(--cream-dim);white-space:nowrap;">0 sélectionné</span>
+  <button class="btn btn-secondary btn-sm" onclick="selectAll()">Tout</button>
+  <button class="btn btn-danger btn-sm" id="selDeleteBtn" onclick="deleteSelected()">🗑 Supprimer</button>
+  <button class="btn btn-secondary btn-sm" onclick="exitSelectMode()">✕ Annuler</button>
+</div>
+
+<!-- DUPLICATE MODAL -->
+<div class="modal-overlay" id="dupModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">⚠️ Doublon détecté</div>
+      <button class="btn-close" onclick="closeModal('dupModal')">✕</button>
+    </div>
+    <div class="form-body">
+      <div id="dupModalMsg" class="info-box gold" style="margin-bottom:0;"></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+        <button class="btn btn-secondary" onclick="dupChoice('overwrite')">♻️ Remplacer l'existant</button>
+        <button class="btn btn-secondary" onclick="dupChoice('skip')">⏭ Ignorer (garder l'existant)</button>
+        <button class="btn btn-secondary" onclick="dupChoice('keepboth')">📚 Garder les deux</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal"><div class="modal-handle"></div><div id="detailContent"></div></div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Paramètres</div>
+      <button class="btn-close" onclick="closeModal('settingsModal')">✕</button>
+    </div>
+
+    <!-- ── PROFIL ── -->
+    <div class="settings-section">
+      <h3>👤 Mon profil</h3>
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar" id="profileAvatarEl" onclick="document.getElementById('profileAvatarFile').click()">
+          <span id="profileAvatarPlaceholder">👤</span>
+          <img id="profileAvatarImg" style="display:none">
+          <input type="file" id="profileAvatarFile" accept="image/*" style="display:none" onchange="handleAvatarFile(event)">
+        </div>
+        <div class="profile-avatar-btns">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('profileAvatarFile').click()">📷 Photo</button>
+          <button class="btn btn-secondary btn-sm" onclick="promptAvatarUrl()">🔗 URL</button>
+          <button class="btn btn-secondary btn-sm" id="removeAvatarBtn" style="display:none" onclick="removeAvatar()">✕</button>
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:10px;">
+        <div class="form-group">
+          <div class="form-label">Prénom</div>
+          <input class="form-input" id="profileFirstName" placeholder="Jean">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Nom</div>
+          <input class="form-input" id="profileLastName" placeholder="Dupont">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <div class="form-label">Email (compte)</div>
+        <input class="form-input" id="profileEmail" placeholder="—" disabled style="opacity:0.5;cursor:not-allowed;">
+      </div>
+      <button class="btn btn-primary" onclick="saveProfile()">Enregistrer le profil</button>
+    </div>
+
+    <!-- ── DONNÉES LOCALES ── -->
+    <div class="settings-section">
+      <h3>💾 Données locales</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="exportData()">📤 Exporter en JSON</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportExcel()" style="border-color:var(--green);color:var(--green);">📊 Exporter en Excel</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importInput').click()">📥 Importer un JSON
+          <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="openXlImport()" style="border-color:var(--green);color:var(--green);">📊 Importer un Excel / CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑 Effacer la bibliothèque locale</button>
+      </div>
+    </div>
+
+    <!-- ── INSTALLATION MOBILE ── -->
+    <div class="settings-section">
+      <h3>ℹ️ Installation mobile</h3>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.7;">
+        <strong style="color:var(--text)">iPhone</strong> → Safari → bouton Partager → <em>Sur l'écran d'accueil</em><br>
+        <strong style="color:var(--text)">Android</strong> → Chrome → menu ⋮ → <em>Ajouter à l'écran d'accueil</em>
+      </div>
+    </div>
+
+    <!-- ── PARAMÈTRES AVANCÉS ── -->
+    <div class="settings-section" style="border:none;">
+      <h3>🔧 Paramètres avancés</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+
+        <details class="adv-details">
+          <summary class="adv-summary">☁️ Synchronisation Supabase</summary>
+          <div class="adv-body">
+            <div class="step-list" style="margin-bottom:14px;">
+              <div class="step"><div class="step-num">1</div><div>Créez un compte gratuit sur <strong>supabase.com</strong> et créez un projet</div></div>
+              <div class="step"><div class="step-num">2</div><div>Dans <strong>Authentication → Providers</strong>, activez <em>Email</em></div></div>
+              <div class="step"><div class="step-num">3</div><div>Dans <strong>SQL Editor</strong>, exécutez :</div></div>
+            </div>
+            <div class="info-box orange" style="margin-bottom:12px;">
+              <code class="sql-block">create table if not exists books (
+  id text primary key,
+  user_id uuid references auth.users not null,
+  type text, title text, author text,
+  publisher text, collection text,
+  series text, volume text, year text,
+  genre text, notes text, cover text,
+  added_at bigint, updated_at bigint
+);
+alter table books enable row level security;
+create policy "Users see own books" on books
+  for all using (auth.uid() = user_id);</code>
+              <div style="margin-top:8px;">Dans <strong>Project Settings → API</strong> : copiez l'URL et la clé <em>anon public</em>.</div>
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+              <div class="form-label">URL du projet</div>
+              <input class="form-input" id="sbUrl" placeholder="https://xxxx.supabase.co">
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+              <div class="form-label">Clé anon (publique)</div>
+              <input class="form-input" id="sbKey" type="password" placeholder="eyJhbGci…">
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary" style="flex:1" onclick="saveSupabaseConfig()">Connecter &amp; Synchroniser</button>
+              <button class="btn btn-secondary btn-sm" onclick="clearSupabase()" title="Déconnecter">✕</button>
+            </div>
+            <div id="sbStatus" style="margin-top:10px;"></div>
+          </div>
+        </details>
+
+        <details class="adv-details">
+          <summary class="adv-summary">🤖 Clé API Claude (analyse photo IA)</summary>
+          <div class="adv-body">
+            <div class="form-group" style="margin-bottom:10px;">
+              <input class="form-input" id="apiKeyInput" type="password" placeholder="sk-ant-api03-…">
+              <div style="font-size:11px;color:var(--text-dim);margin-top:5px;">Obtenir sur <span style="color:var(--accent2)">console.anthropic.com</span> · ~0,003 € / image</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="saveApiKey()">Enregistrer la clé</button>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const BOOKS_KEY='mabib_books',APIKEY_KEY='mabib_apikey',SB_URL_KEY='mabib_sb_url',SB_KEY_KEY='mabib_sb_key',LAST_SYNC='mabib_last_sync',PROFILE_KEY='mabib_profile';
+let books=[],viewMode='grid',currentCat='all',currentGenre='all',currentSortDate='none',currentSortTitle='none',currentSortAuthor='none',currentSortYear='none',currentSortReadDate='none',selectedType='bd',currentPhoto=null,currentPhotoMime='image/jpeg',editingId=null,syncing=false;
+const TL={bd:'BD',roman:'Roman',manga:'Manga',novella:'Novella',nouvelle:'Nouvelle',inconnu:'À renseigner'},TI={bd:'📚',roman:'📖',manga:'🇯🇵',novella:'📕',nouvelle:'📄',inconnu:'❓'};
+
+function genUUID(){
+  if(crypto?.randomUUID)return crypto.randomUUID();
+  return([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+}
+function migrateUUIDs(){
+  let changed=false;
+  books=books.map(b=>{
+    if(!b.id||b.id.length<20){const newId=genUUID();changed=true;return{...b,id:newId};}
+    return b;
+  });
+  if(changed){saveBooks();console.log('UUIDs migrés');}
+}
+function loadBooks(){try{books=JSON.parse(localStorage.getItem(BOOKS_KEY)||'[]');}catch(e){books=[];}}
+function saveBooks(){localStorage.setItem(BOOKS_KEY,JSON.stringify(books));}
+function getApiKey(){return localStorage.getItem(APIKEY_KEY)||'';}
+function getSbUrl(){return(localStorage.getItem(SB_URL_KEY)||'').replace(/\/$/,'');}
+function getSbKey(){return localStorage.getItem(SB_KEY_KEY)||'';}
+function sbOk(){return!!(getSbUrl()&&getSbKey());}
+
+// ── SUPABASE CLIENT ──
+let _sbClient=null;
+function getSbClient(){
+  if(_sbClient)return _sbClient;
+  const url=getSbUrl(),key=getSbKey();
+  if(!url||!key)return null;
+  _sbClient=supabase.createClient(url,key);
+  return _sbClient;
+}
+function resetSbClient(){_sbClient=null;}
+
+// ── AUTH STATE ──
+let currentUser=null;
+
+function showAuthScreen(){
+  document.getElementById('authScreen').style.display='flex';
+  document.getElementById('userBar').style.display='none';
+  // Pre-fill config if already set
+  document.getElementById('authSbUrl').value=getSbUrl();
+  document.getElementById('authSbKey').value=getSbKey();
+  if(!getSbUrl()||!getSbKey()){
+    document.getElementById('authConfig').setAttribute('open','');
+  }
+}
+
+function hideAuthScreen(){
+  document.getElementById('authScreen').style.display='none';
+}
+
+function showUserBar(user){
+  document.getElementById('userBar').style.display='flex';
+  renderUserBar();
+}
+
+function switchAuthTab(tab){
+  document.getElementById('tabLogin').classList.toggle('active',tab==='login');
+  document.getElementById('tabSignup').classList.toggle('active',tab==='signup');
+  document.getElementById('authPasswordConfirm').style.display=tab==='signup'?'block':'none';
+  document.getElementById('authSubmitBtn').textContent=tab==='signup'?'Créer mon compte':'Se connecter';
+  document.getElementById('authForgotBtn').style.display=tab==='login'?'block':'none';
+  document.getElementById('authMsg').style.display='none';
+}
+
+function saveAuthConfig(){
+  const url=document.getElementById('authSbUrl').value.trim().replace(/\/$/,'');
+  const key=document.getElementById('authSbKey').value.trim();
+  if(!url||!key){setAuthMsg('URL et clé requis.','error');return;}
+  localStorage.setItem(SB_URL_KEY,url);
+  localStorage.setItem(SB_KEY_KEY,key);
+  resetSbClient();
+  setAuthMsg('✅ Configuration enregistrée. Vous pouvez maintenant vous connecter.','success');
+}
+
+function setAuthMsg(msg,type){
+  const el=document.getElementById('authMsg');
+  el.textContent=msg;el.className='auth-msg '+(type||'');el.style.display='block';
+}
+
+async function handleAuth(){
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPassword').value;
+  const isSignup=document.getElementById('tabSignup').classList.contains('active');
+  if(!email||!pass){setAuthMsg('Email et mot de passe requis.','error');return;}
+  const sb=getSbClient();
+  if(!sb){setAuthMsg('Configurez d\'abord Supabase ci-dessous.','error');document.getElementById('authConfig').setAttribute('open','');return;}
+  const btn=document.getElementById('authSubmitBtn');
+  btn.disabled=true;btn.textContent=isSignup?'Création…':'Connexion…';
+  try{
+    if(isSignup){
+      const confirm=document.getElementById('authPasswordConfirm').value;
+      if(pass!==confirm){setAuthMsg('Les mots de passe ne correspondent pas.','error');btn.disabled=false;btn.textContent='Créer mon compte';return;}
+      const{error}=await sb.auth.signUp({email,password:pass});
+      if(error)throw error;
+      setAuthMsg('✅ Compte créé ! Vérifiez votre email pour confirmer votre inscription.','success');
+      btn.textContent='Créer mon compte';
+    } else {
+      const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+      if(error)throw error;
+      await onSignedIn(data.user);
+    }
+  }catch(err){
+    setAuthMsg('Erreur : '+(err.message||err),'error');
+    btn.textContent=isSignup?'Créer mon compte':'Se connecter';
+  }finally{btn.disabled=false;}
+}
+
+async function handleForgotPassword(){
+  const email=document.getElementById('authEmail').value.trim();
+  if(!email){setAuthMsg('Saisissez votre email d\'abord.','error');return;}
+  const sb=getSbClient();
+  if(!sb){setAuthMsg('Configurez d\'abord Supabase.','error');return;}
+  const{error}=await sb.auth.resetPasswordForEmail(email);
+  if(error)setAuthMsg('Erreur : '+error.message,'error');
+  else setAuthMsg('✅ Email de réinitialisation envoyé !','success');
+}
+
+async function handleSignOut(){
+  const sb=getSbClient();
+  if(sb)await sb.auth.signOut();
+  currentUser=null;
+  books=[];saveBooks();
+  showAuthScreen();
+  document.getElementById('userBar').style.display='none';
+  // Hide main app
+  document.querySelector('.app-header').style.display='none';
+  document.querySelector('.sync-bar').style.display='none';
+  document.querySelector('.filter-bar').style.display='none';
+  document.querySelector('.stats-bar').style.display='none';
+  document.querySelector('.library-grid').style.display='none';
+  document.querySelector('.fab').style.display='none';
+}
+
+async function onSignedIn(user){
+  currentUser=user;
+  // Ensure profile row exists (for friend discovery)
+  try{
+    const sb=getSbClient();
+    if(sb){
+      const p=getProfile();
+      await sb.from('profiles').upsert({
+        id:user.id, email:user.email,
+        display_name:((p.firstName||'')+' '+(p.lastName||'')).trim()||'',
+        avatar:p.avatar||''
+      },{onConflict:'id'});
+    }
+  }catch(e){}
+  hideAuthScreen();
+  showUserBar(user);
+  // Show main app
+  document.querySelector('.app-header').style.display='';
+  document.querySelector('.sync-bar').style.display='';
+  document.querySelector('.filter-bar').style.display='';
+  document.querySelector('.stats-bar').style.display='';
+  document.querySelector('.library-grid').style.display='';
+  document.querySelector('.fab').style.display='';
+  loadBooks();
+  migrateUUIDs();
+  buildGenreSelect();
+  renderGrid();
+  updateViewToggleBtn();
+  pollPendingFriends();
+  syncNow(true);
+}
+
+async function initAuth(){
+  const sb=getSbClient();
+  if(!sb){showAuthScreen();return;}
+  // Check existing session
+  const{data:{session}}=await sb.auth.getSession();
+  if(session?.user){
+    await onSignedIn(session.user);
+  } else {
+    showAuthScreen();
+  }
+  // Listen to auth changes
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN'&&session?.user)await onSignedIn(session.user);
+    if(event==='SIGNED_OUT')handleSignOut();
+  });
+}
+
+function sbH(){return{'Content-Type':'application/json','apikey':getSbKey(),'Authorization':'Bearer '+(getSbClient()?._session?.access_token||getSbKey()),'Prefer':'return=representation'};}
+function sbEP(q=''){return`${getSbUrl()}/rest/v1/books${q}`;}
+
+async function sbFetch(){
+  const sb=getSbClient();if(!sb||!currentUser)return[];
+  const{data,error}=await sb.from('books').select('*').order('added_at',{ascending:false});
+  if(error)throw new Error(error.message);
+  return data||[];
+}
+async function sbUpsert(book){
+  const sb=getSbClient();if(!sb||!currentUser)return;
+  const row=toRow(book);
+  const{error}=await sb.from('books').upsert(row,{onConflict:'id'});
+  if(error)console.warn('sbUpsert',error.message);
+}
+async function sbDelete(id){
+  const sb=getSbClient();if(!sb||!currentUser)return;
+  const{error}=await sb.from('books').delete().eq('id',id);
+  if(error)console.warn('sbDelete',error.message);
+}
+function toRow(b){return{id:b.id,user_id:currentUser?.id,type:b.type,title:b.title,author:b.author||'',publisher:b.publisher||'',collection:b.collection||'',series:b.series||'',volume:b.volume||'',year:b.year||'',genre:b.genre||'',notes:b.notes||'',read_date:b.readDate||null,cover:b.cover||null,added_at:b.addedAt||Date.now(),updated_at:Date.now()};}
+function fromRow(r){return{id:r.id,type:r.type,title:r.title,author:r.author,publisher:r.publisher,collection:r.collection,series:r.series,volume:r.volume,year:r.year,genre:r.genre||'',notes:r.notes,readDate:r.read_date||'',cover:r.cover,addedAt:r.added_at,updatedAt:r.updated_at};}
+
+async function syncNow(silent=false){
+  if(!sbOk()||!currentUser){setSS('offline',currentUser?'Non configuré':'Non connecté');if(!silent)showToast(currentUser?'Configurez Supabase dans les paramètres.':'Connectez-vous d\'abord.','error');return;}
+  if(syncing)return;
+  syncing=true;setSS('syncing','Synchronisation…');
+  try{
+    const remote=await sbFetch();
+    const rm={};remote.forEach(r=>{rm[r.id]=fromRow(r);});
+    const remIds=new Set(Object.keys(rm));
+    for(const b of books.filter(b=>!remIds.has(b.id)))await sbUpsert(b);
+    const merged=[];
+    const allIds=new Set([...books.map(b=>b.id),...Object.keys(rm)]);
+    for(const id of allIds){
+      const loc=books.find(b=>b.id===id),rem=rm[id];
+      if(!loc)merged.push(rem);
+      else if(!rem)merged.push(loc);
+      else merged.push((loc.updatedAt||loc.addedAt||0)>=(rem.updatedAt||rem.addedAt||0)?loc:rem);
+    }
+    merged.sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
+    books=merged;saveBooks();buildGenreSelect();renderGrid();
+    const now=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    localStorage.setItem(LAST_SYNC,now);
+    setSS('ok',`Synchronisé à ${now}`);
+    if(!silent)showToast('✅ Synchronisé !','success');
+  }catch(err){
+    setSS('error','Erreur de synchronisation');
+    if(!silent)showToast('Erreur : '+err.message,'error');
+    console.error('Sync',err);
+  }finally{syncing=false;}
+}
+function setSS(state,label){document.getElementById('syncDot').className='sync-dot '+state;document.getElementById('syncLabel').textContent=label;}
+
+let selectMode=false;
+let selectedIds=new Set();
+
+function toggleSelectMode(){
+  if(selectMode){exitSelectMode();return;}
+  selectMode=true;
+  selectedIds.clear();
+  const btn=document.getElementById('selectModeBtn');
+  if(btn){btn.classList.add('active');btn.title='Quitter la sélection';}
+  document.getElementById('selToolbar').style.display='flex';
+  updateSelToolbar();
+  renderGrid();
+}
+function exitSelectMode(){
+  selectMode=false;
+  selectedIds.clear();
+  const btn=document.getElementById('selectModeBtn');
+  if(btn){btn.classList.remove('active');btn.title='Mode sélection';}
+  document.getElementById('selToolbar').style.display='none';
+  renderGrid();
+}
+function toggleSelectItem(id,el){
+  if(selectedIds.has(id)){selectedIds.delete(id);}else{selectedIds.add(id);}
+  updateSelToolbar();
+  // Update row style
+  const row=el.closest('.sel-list-item');
+  if(row)row.classList.toggle('selected',selectedIds.has(id));
+  const chk=el.querySelector('.sel-chk-box')||el;
+  chk.classList.toggle('checked',selectedIds.has(id));
+  // Update header checkbox
+  const allVisible=Array.from(document.querySelectorAll('.sel-list-item')).map(r=>r.dataset.id);
+  const allChecked=allVisible.length>0&&allVisible.every(i=>selectedIds.has(i));
+  const hdrChk=document.getElementById('selHeaderChk');
+  if(hdrChk)hdrChk.classList.toggle('checked',allChecked);
+}
+function selectAll(){
+  const rows=document.querySelectorAll('.sel-list-item');
+  const allChecked=rows.length>0&&Array.from(rows).every(r=>selectedIds.has(r.dataset.id));
+  rows.forEach(r=>{
+    if(allChecked){selectedIds.delete(r.dataset.id);r.classList.remove('selected');}
+    else{selectedIds.add(r.dataset.id);r.classList.add('selected');}
+    const chk=r.querySelector('.sel-chk-box');
+    if(chk)chk.classList.toggle('checked',!allChecked);
+  });
+  const hdrChk=document.getElementById('selHeaderChk');
+  if(hdrChk)hdrChk.classList.toggle('checked',!allChecked);
+  updateSelToolbar();
+}
+function toggleSelectAll(){
+  selectAll();
+}
+function updateSelToolbar(){
+  const n=selectedIds.size;
+  document.getElementById('selCount').textContent=`${n} sélectionné${n>1?'s':''}`;
+  const del=document.getElementById('selDeleteBtn');
+  if(del)del.disabled=n===0;
+}
+async function deleteSelected(){
+  if(!selectedIds.size)return;
+  if(!confirm(`Supprimer ${selectedIds.size} titre${selectedIds.size>1?'s':''} ?`))return;
+  const ids=[...selectedIds];
+  books=books.filter(b=>!ids.includes(b.id));
+  saveBooks();buildGenreSelect();
+  for(const id of ids)sbDelete(id);
+  selectedIds.clear();
+  updateSelToolbar();
+  renderGrid();
+  showToast(`🗑 ${ids.length} titre${ids.length>1?'s':''} supprimé${ids.length>1?'s':''}.`,'');
+}
+
+function selectListHeader(){
+  const allVisible=Array.from(document.querySelectorAll('.sel-list-item')).map(r=>r.dataset.id);
+  const allChecked=allVisible.length>0&&allVisible.every(i=>selectedIds.has(i));
+  return`<div class="sel-list-header">
+    <div class="sel-chk-cell"><div id="selHeaderChk" class="sel-chk-box${allChecked?' checked':''}" onclick="toggleSelectAll()"></div></div>
+    <div></div>
+    <div class="sel-cell">Titre</div>
+    <div class="sel-cell sel-col-author">Auteur</div>
+    <div class="sel-cell sel-col-series">Série</div>
+    <div class="sel-cell sel-col-genre">Genre</div>
+    <div class="sel-cell sel-col-pub">Éditeur</div>
+    <div class="sel-cell sel-col-year">Année</div>
+    <div class="sel-cell">Lu le</div>
+  </div>`;
+}
+function renderSelectListItem(b){
+  const sel=selectedIds.has(b.id);
+  return`<div class="sel-list-item${sel?' selected':''}" data-id="${b.id}" onclick="toggleSelectItem('${b.id}',this)">
+    <div class="sel-chk-cell"><div class="sel-chk-box${sel?' checked':''}"></div></div>
+    <div>${b.cover?`<img class="sel-thumb" src="${b.cover}" data-id="${b.id}" data-isbn="${b.isbn||''}" onerror="coverError(this)">`:`<div class="sel-thumb-ph">${TI[b.type]||'\uD83D\uDCDA'}</div>`}</div>
+    <div class="sel-cell title">${esc(b.title)}</div>
+    <div class="sel-cell dim sel-col-author">${esc(b.author||'')}</div>
+    <div class="sel-cell dim sel-col-series">${esc(b.series?b.series+(b.volume?' T.'+b.volume:''):'')}</div>
+    <div class="sel-cell dim sel-col-genre">${esc(b.genre||'')}</div>
+    <div class="sel-cell dim sel-col-pub">${esc(b.publisher||'')}</div>
+    <div class="sel-cell dim sel-col-year">${esc(b.year||'')}</div>
+    <div class="sel-cell dim">${b.readDate?new Date(b.readDate).toLocaleDateString('fr-FR',{month:'short',year:'numeric'}):''}</div>
+  </div>`;
+}
+
+function toggleViewMode(){
+  viewMode=viewMode==='grid'?'list':'grid';
+  localStorage.setItem('kulture_view',viewMode);
+  updateViewToggleBtn();
+  renderGrid();
+}
+function updateViewToggleBtn(){
+  const btn=document.getElementById('viewToggleBtn');
+  const icon=document.getElementById('viewToggleIcon');
+  if(!btn)return;
+  if(viewMode==='list'){
+    btn.classList.add('active');
+    // List icon (lines)
+    icon.innerHTML=`<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>`;
+  } else {
+    btn.classList.remove('active');
+    // Grid icon (squares)
+    icon.innerHTML=`<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>`;
+  }
+}
+
+function listHeader(){
+  return `<div class="list-header">
+    <div></div>
+    <div class="list-header-cell">Titre / Auteur</div>
+    <div class="list-header-cell list-col-hidden">Série / Genre</div>
+    <div class="list-header-cell list-col-hidden">Éditeur / Année</div>
+    <div class="list-header-cell list-col-hidden">Date de lecture</div>
+    <div class="list-header-cell"></div>
+  </div>`;
+}
+
+function renderListItem(b){
+  const readTitle=b.readDate?'Lu le '+new Date(b.readDate).toLocaleDateString('fr-FR'):'Marquer comme lu';
+  const seriesStr=b.series?(b.series+(b.volume?' · T.'+b.volume:'')):'';
+  const pubStr=[b.publisher,b.collection].filter(Boolean).join(' · ');
+  const readStr=b.readDate?new Date(b.readDate).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):'—';
+  return `<div class="list-item" onclick="openDetail('${b.id}')">
+    <div class="list-thumb">
+      ${b.cover?`<img src="${b.cover}" alt="${esc(b.title)}" loading="lazy">`
+        :`<div class="cover-placeholder"><div class="icon">${TI[b.type]||'📚'}</div></div>`}
+    </div>
+    <div class="list-cell">
+      <span class="list-title">${esc(b.title)}</span>
+      <span class="list-author">${esc(b.author||'—')}</span>
+    </div>
+    <div class="list-cell list-col-hidden">
+      ${seriesStr?`<span class="list-col-text">${esc(seriesStr)}</span>`:'<span class="list-col-dim">—</span>'}
+      ${b.genre?`<span class="list-genre-badge">🏷 ${esc(b.genre)}</span>`:`<span class="list-type-badge">${TI[b.type]||'?'} ${TL[b.type]||b.type}</span>`}
+    </div>
+    <div class="list-cell list-col-hidden">
+      ${pubStr?`<span class="list-col-text">${esc(pubStr)}</span>`:'<span class="list-col-dim">—</span>'}
+      ${b.year?`<span class="list-col-dim">${esc(b.year)}</span>`:''}
+    </div>
+    <div class="list-cell list-col-hidden">
+      <span class="${b.readDate?'list-col-text':'list-col-dim'}" style="${b.readDate?'color:var(--green);':''}">${readStr}</span>
+    </div>
+    <div class="list-read-col">
+      <button class="list-read-btn ${b.readDate?'read':'unread'}" onclick="event.stopPropagation();toggleRead('${b.id}')" title="${readTitle}"></button>
+    </div>
+  </div>`;
+}
+
+function toggleRead(id){
+  const b=books.find(b=>b.id===id);
+  if(!b)return;
+  if(b.readDate){
+    // Already read → unmark
+    b.readDate='';
+  } else {
+    // Mark as read today
+    b.readDate=new Date().toISOString().slice(0,10);
+  }
+  b.updatedAt=Date.now();
+  saveBooks();
+  renderGrid();
+  sbUpsert(b);
+  showToast(b.readDate?'📖 Marqué comme lu !':'⬜ Retiré des lectures','success');
+}
+
+function renderGrid(){
+  const grid=document.getElementById('libraryGrid');
+  // Apply view mode class
+  grid.classList.toggle('list-view',viewMode==='list'&&!selectMode);
+  if(!selectMode)grid.className='library-grid'+(viewMode==='list'?' list-view':'');
+  const q=document.getElementById('searchInput').value.toLowerCase().trim();
+  let f=books.filter(b=>{
+    if(currentCat!=='all'&&b.type!==currentCat)return false;
+    if(currentGenre!=='all'&&(b.genre||'').toLowerCase()!==currentGenre.toLowerCase())return false;
+    if(currentSortReadDate==='read_set'&&!b.readDate)return false;
+    if(currentSortReadDate==='read_none'&&b.readDate)return false;
+    if(!q)return true;
+    return[b.title,b.author,b.series,b.publisher,b.collection,b.genre].some(v=>v&&v.toLowerCase().includes(q));
+  });
+  // Sort
+  f=sortBooks(f);
+  // Stats
+  const activeFilters=(currentCat!=='all'?1:0)+(currentGenre!=='all'?1:0)+(currentSortDate!=='none'?1:0)+(currentSortTitle!=='none'?1:0)+(currentSortAuthor!=='none'?1:0)+(currentSortYear!=='none'?1:0)+(currentSortReadDate!=='none'?1:0)+(q?1:0);
+  const badge=activeFilters?`<span class="filter-active-badge">${activeFilters} filtre${activeFilters>1?'s':''} actif${activeFilters>1?'s':''}</span>`:'';
+  document.getElementById('statsBar').innerHTML=`${f.length} titre${f.length!==1?'s':''} · ${books.length} au total${badge}`;
+  if(!f.length){grid.innerHTML=`<div class="empty-state"><div class="icon">📚</div><h3>${books.length?'Aucun résultat':'Bibliothèque vide'}</h3><p>${books.length?'Essayez un autre filtre.':'Appuyez sur + pour ajouter votre premier titre.'}</p></div>`;return;}
+  if(selectMode){
+    grid.className='library-grid sel-list-view';
+    grid.innerHTML=selectListHeader()+f.map(b=>renderSelectListItem(b)).join('');
+  } else if(viewMode==='list'){
+    grid.innerHTML=listHeader()+f.map(b=>renderListItem(b)).join('');
+  } else {
+    grid.innerHTML=f.map(b=>`<div class="book-card" onclick="openDetail('${b.id}')">
+    <div class="book-cover ${b.cover?'has-cover':'no-cover'}">${b.cover?`<img src="${b.cover}" alt="${esc(b.title)}" loading="lazy" data-id="${b.id}" data-isbn="${b.isbn||''}" onerror="coverError(this)">`:`<div class="cover-placeholder"><div class="icon">${TI[b.type]||'📚'}</div><div class="lbl">${TL[b.type]||''}</div></div>`}
+    <button class="read-btn ${b.readDate?'read':'unread'}" onclick="event.stopPropagation();toggleRead('${b.id}')" title="${b.readDate?'Lu le '+new Date(b.readDate).toLocaleDateString('fr-FR'):'Marquer comme lu'}"></button>
+    <div class="type-badge">${TL[b.type]||b.type}</div></div>
+    <div class="book-info"><div class="book-title">${esc(b.title)}</div><div class="book-author">${esc(b.author||'—')}</div>${b.series?`<div class="book-series">📁 ${esc(b.series)}${b.volume?' · T.'+esc(b.volume):''}</div>`:''}${b.genre?`<div class="book-series" style="color:var(--gold)">🏷 ${esc(b.genre)}</div>`:''}${b.readDate?`<div class="book-read-date">📖 ${new Date(b.readDate).toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}</div>`:''}</div>
+  </div>`).join('');
+  }
+}
+
+function sortBooks(arr){
+  // Build chained comparator: apply each active sort as a tiebreaker
+  // Priority: Date > Titre > Auteur > Année (left to right, first non-zero wins)
+  return [...arr].sort((a,b)=>{
+    let r=0;
+    if(currentSortDate!=='none'){
+      r=currentSortDate==='date_asc'?(a.addedAt||0)-(b.addedAt||0):(b.addedAt||0)-(a.addedAt||0);
+      if(r!==0)return r;
+    }
+    if(currentSortTitle!=='none'){
+      r=currentSortTitle==='alpha_asc'
+        ?(a.title||'').localeCompare(b.title||'','fr')
+        :(b.title||'').localeCompare(a.title||'','fr');
+      if(r!==0)return r;
+    }
+    if(currentSortAuthor!=='none'){
+      r=currentSortAuthor==='author_asc'
+        ?(a.author||'').localeCompare(b.author||'','fr')
+        :(b.author||'').localeCompare(a.author||'','fr');
+      if(r!==0)return r;
+    }
+    if(currentSortYear!=='none'){
+      r=currentSortYear==='year_asc'
+        ?parseInt(a.year||0)-parseInt(b.year||0)
+        :parseInt(b.year||0)-parseInt(a.year||0);
+      if(r!==0)return r;
+    }
+    if(currentSortReadDate==='read_desc'||currentSortReadDate==='read_asc'){
+      const da=a.readDate?new Date(a.readDate).getTime():0;
+      const db=b.readDate?new Date(b.readDate).getTime():0;
+      r=currentSortReadDate==='read_asc'?da-db:db-da;
+      if(r!==0)return r;
+    }
+    // default: most recently added first
+    return (b.addedAt||0)-(a.addedAt||0);
+  });
+}
+
+function buildGenreSelect(){
+  const genres=[...new Set(books.map(b=>b.genre).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr'));
+  const sel=document.getElementById('genreSelect');
+  // Update datalist for form
+  const dl=document.getElementById('genreList');
+  if(dl) dl.innerHTML=genres.map(g=>`<option value="${esc(g)}">`).join('');
+  // Always visible — disabled & greyed when no genres yet
+  if(!genres.length){
+    sel.innerHTML='<option value="all">🏷 Genre</option>';
+    sel.disabled=true;
+    sel.style.opacity='0.4';
+    sel.className='f-select';
+    return;
+  }
+  sel.disabled=false;
+  sel.style.opacity='1';
+  // Rebuild options keeping current selection
+  sel.innerHTML=`<option value="all">🏷 Genre</option>`
+    +genres.map(g=>`<option value="${esc(g)}"${currentGenre===g?' selected':''}>${esc(g)}</option>`).join('');
+  sel.className='f-select'+(currentGenre!=='all'?' genre-active':'');
+}
+
+function updateSelectStyles(){
+  const cat=document.getElementById('catSelect');
+  if(cat) cat.className='f-select'+(currentCat!=='all'?' active':'');
+  ['sortDate','sortTitle','sortAuthor','sortYear','sortReadDate'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.className='f-select'+(el.value!=='none'?' active':'');
+  });
+  const gs=document.getElementById('genreSelect');
+  if(gs) gs.className='f-select'+(currentGenre!=='all'?' genre-active':'');
+  const hasFilter=currentCat!=='all'||currentGenre!=='all'
+    ||currentSortDate!=='none'||currentSortTitle!=='none'
+    ||currentSortAuthor!=='none'||currentSortYear!=='none'||currentSortReadDate!=='none';
+  const rb=document.getElementById('filterResetBtn');
+  if(rb) rb.style.display=hasFilter?'inline-block':'none';
+}
+
+function resetFilters(){
+  currentCat='all'; currentGenre='all';
+  currentSortDate='none'; currentSortTitle='none'; currentSortAuthor='none'; currentSortYear='none'; currentSortReadDate='none';
+  document.getElementById('catSelect').value='all';
+  ['sortDate','sortTitle','sortAuthor','sortYear','sortReadDate'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='none';
+  });
+  const gs=document.getElementById('genreSelect'); if(gs) gs.value='all';
+  updateSelectStyles();
+  buildGenreSelect();
+  renderGrid();
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function setCat(cat,el){currentCat=cat;renderGrid();}
+function setGenre(g,el){currentGenre=g;renderGrid();}
+function applyFilters(){
+  currentSortDate=document.getElementById('sortDate').value;
+  currentSortTitle=document.getElementById('sortTitle').value;
+  currentSortAuthor=document.getElementById('sortAuthor').value;
+  currentSortYear=document.getElementById('sortYear').value;
+  currentSortReadDate=document.getElementById('sortReadDate').value;
+  currentCat=document.getElementById('catSelect').value;
+  const gs=document.getElementById('genreSelect');
+  if(gs) currentGenre=gs.value;
+  updateSelectStyles();
+  buildGenreSelect();
+  renderGrid();
+}
+function filterBooks(){renderGrid();}
+
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o&&o.id!=='addModal'&&o.id!=='friendsModal')closeModal(o.id);}));
+
+function openAddModal(){editingId=null;resetAddForm();document.getElementById('addModalTitle').textContent='Ajouter un titre';document.getElementById('apiKeyBox').style.display=getApiKey()?'none':'block';openModal('addModal');}
+function openSettings(){
+  document.getElementById('sbUrl').value=getSbUrl();
+  document.getElementById('sbKey').value=getSbKey();
+  document.getElementById('apiKeyInput').value=getApiKey();
+  loadProfileIntoSettings();
+  openModal('settingsModal');
+}
+
+let currentTab='manual';
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='manual'?0:1)));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+function selectType(type,el){selectedType=type;document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
+
+function resetAddForm(){
+  ['f-title','f-author','f-publisher','f-collection','f-series','f-year','f-genre','f-notes','f-readdate','f-isbn'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('f-volume').value='';
+  selectedType='bd';document.querySelectorAll('.type-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  currentPhoto=null;
+  document.getElementById('photoZone').style.display='block';
+  document.getElementById('photoPreviewWrap').style.display='none';
+  document.getElementById('photoPreviewWrap').innerHTML='';
+  document.getElementById('analyseBtn').style.display='none';
+  document.getElementById('analyseResult').style.display='none';
+  document.getElementById('ocrFormWrap').style.display='none';
+  document.getElementById('analyseSpinner').style.display='none';
+  document.getElementById('searchSpinner').style.display='none';
+  document.getElementById('searchResults').style.display='none';
+  document.getElementById('searchResults').innerHTML='';
+  document.getElementById('authorSearchSpinner').style.display='none';
+  document.getElementById('authorSearchResults').style.display='none';
+  document.getElementById('authorSearchResults').innerHTML='';
+  const sab=document.getElementById('searchAuthorBtn'); if(sab) sab.disabled=false;
+  coverDataUrl = null;
+  document.getElementById('coverFileInput').value='';
+  document.getElementById('coverDropHint').style.display='flex';
+  document.getElementById('coverPreview').style.display='none';
+  document.getElementById('coverDropZone').classList.remove('has-image');
+  document.getElementById('f-cover-url').value='';
+  document.getElementById('coverUrlPreview').style.display='none';
+  document.getElementById('coverNotFound').style.display='none';
+  const sb=document.getElementById('searchTitleBtn'); if(sb) sb.disabled=false;
+  document.getElementById('photoInput').value='';
+  switchTab('manual');
+}
+
+let coverDataUrl = null;
+
+function switchCoverTab(tab, el) {
+  document.querySelectorAll('.cover-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('cover-tab-upload').style.display = tab === 'upload' ? 'block' : 'none';
+  document.getElementById('cover-tab-url').style.display = tab === 'url' ? 'block' : 'none';
+}
+
+async function handleCoverFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const compressed = await compressImage(await new Promise(res => {
+    const r = new FileReader(); r.onload = ev => res(ev.target.result); r.readAsDataURL(file);
+  }));
+  coverDataUrl = compressed;
+  document.getElementById('coverDropHint').style.display = 'none';
+  document.getElementById('coverPreview').style.display = 'block';
+  document.getElementById('coverPreviewImg').src = compressed;
+  document.getElementById('coverDropZone').classList.add('has-image');
+}
+
+function removeCover() {
+  coverDataUrl = null;
+  document.getElementById('coverFileInput').value = '';
+  document.getElementById('coverDropHint').style.display = 'flex';
+  document.getElementById('coverPreview').style.display = 'none';
+  document.getElementById('coverDropZone').classList.remove('has-image');
+}
+
+function _showCoverNotFound(){
+  document.getElementById('coverUrlPreview').style.display='none';
+  const n=document.getElementById('coverNotFound');
+  if(n)n.style.display='block';
+}
+
+function checkCoverImg(img){
+  if(img.naturalWidth>2){
+    // Valid image
+    document.getElementById('coverUrlPreview').style.display='block';
+    const n=document.getElementById('coverNotFound');
+    if(n)n.style.display='none';
+    return;
+  }
+  // OL ghost 1×1 image — run fallback cascade
+  const parent=img.parentElement;
+  parent.style.display='none';
+  const src=img.src;
+  const isbnMatch=src.match(/isbn\/([0-9X]{10,13})/i);
+  const isbn=isbnMatch?isbnMatch[1]:null;
+
+  const tryCover=(url,next)=>{
+    img.onload=()=>{
+      if(img.naturalWidth>2){parent.style.display='block';const n=document.getElementById('coverNotFound');if(n)n.style.display='none';}
+      else if(next)tryCover(next,null);
+      else _showCoverNotFound();
+    };
+    img.onerror=()=>{if(next)tryCover(next,null);else _showCoverNotFound();};
+    img.src=url;
+  };
+
+  if(isbn){
+    // 1) OL by ISBN -M
+    const olM=`https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`;
+    // 2) Google Books content API (does not need key, returns real 200)
+    const gbCover=`https://books.google.com/books/content?vid=ISBN${isbn}&printsec=frontcover&img=1&zoom=2&source=gbs_api`;
+    tryCover(olM, gbCover);
+  } else {
+    _showCoverNotFound();
+  }
+}
+
+function previewCoverUrl(url){
+  const preview=document.getElementById('coverUrlPreview');
+  const notFound=document.getElementById('coverNotFound');
+  const img=document.getElementById('coverUrlImg');
+  if(notFound)notFound.style.display='none';
+  if(url&&url.startsWith('http')){
+    preview.style.display='block';
+    img.onload=()=>checkCoverImg(img);
+    img.onerror=()=>{
+      // Try Google Books by ISBN if available
+      const isbnMatch=url.match(/isbn\/([0-9X]{10,13})/i);
+      if(isbnMatch){
+        img.onerror=()=>_showCoverNotFound();
+        img.onload=()=>checkCoverImg(img);
+        img.src=`https://books.google.com/books/content?vid=ISBN${isbnMatch[1]}&printsec=frontcover&img=1&zoom=2&source=gbs_api`;
+      } else _showCoverNotFound();
+    };
+    img.src=url;
+  } else {
+    preview.style.display='none';
+  }
+}
+
+function getManualCover() {
+  // Upload tab active?
+  if (document.getElementById('cover-tab-upload').style.display !== 'none') {
+    return coverDataUrl || null;
+  } else {
+    const url = document.getElementById('f-cover-url').value.trim();
+    return url || null;
+  }
+}
+
+async function saveManual(){
+  const title=document.getElementById('f-title').value.trim();
+  if(!title){showToast('Le titre est obligatoire.','error');return;}
+  const book={id:editingId||genUUID(),type:selectedType,title,
+    author:document.getElementById('f-author').value.trim(),
+    publisher:document.getElementById('f-publisher').value.trim(),
+    collection:document.getElementById('f-collection').value.trim(),
+    series:document.getElementById('f-series').value.trim(),
+    volume:document.getElementById('f-volume').value.trim(),
+    year:document.getElementById('f-year').value.trim(),
+    genre:document.getElementById('f-genre').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+    cover:editingId?(books.find(b=>b.id===editingId)?.cover||null):getManualCover(),
+    addedAt:editingId?(books.find(b=>b.id===editingId)?.addedAt||Date.now()):Date.now(),
+    readDate:document.getElementById('f-readdate')?.value||'',
+    updatedAt:Date.now()};
+  if(editingId){
+    upsertLocal(book);closeModal('addModal');
+    showToast('✅ Modifié !','success');sbUpsert(book);
+  } else {
+    saveWithDupCheck(book,()=>{
+      closeModal('addModal');
+      showToast('✅ Ajouté !','success');sbUpsert(book);
+    });
+  }
+}
+// ── Grid cover fallback chain ──────────────────────────────────────
+function bnfCoverUrl(isbn){
+  if(!isbn)return null;
+  const clean=isbn.replace(/[^0-9X]/gi,'');
+  return`https://openapi.bnf.fr/couverture/image/image/recupererImage?ISBN=${clean}&couverture=1`;
+}
+async function longitoodCoverUrl(isbn,title,author){
+  try{
+    const params=new URLSearchParams();
+    if(isbn)params.set('isbn',isbn.replace(/[^0-9X]/gi,''));
+    else if(title){params.set('title',title);if(author)params.set('author',author);}
+    else return null;
+    const r=await fetch('https://bookcover.longitood.com/bookcover?'+params.toString());
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d.url||null;
+  }catch{return null;}
+}
+function showCoverPlaceholder(img){
+  const card=img.closest('.book-cover');
+  if(!card)return;
+  const id=img.dataset.id;
+  const b=id&&books.find(x=>x.id===id);
+  const type=b?.type||'bd';
+  card.innerHTML=`<div class="cover-placeholder"><div class="icon">${TI[type]||'\uD83D\uDCDA'}</div><div class="lbl">${TL[type]||''}</div></div><div class="type-badge">${TL[type]||type}</div>`;
+}
+function coverError(img){
+  const src=img.src||'';
+  const isbn=img.dataset.isbn||'';
+  const id=img.dataset.id||'';
+  const b=id&&books.find(x=>x.id===id);
+
+  // Step 1: http → https
+  if(src.startsWith('http://'))  {img.src=src.replace('http://','https://');return;}
+
+  // Step 2: OL -L → -M
+  if(src.includes('openlibrary.org')&&src.includes('-L.jpg')){
+    img.src=src.replace('-L.jpg','-M.jpg');return;
+  }
+
+  // Step 3: BnF
+  if(isbn&&!src.includes('bnf.fr')){
+    const bnf=bnfCoverUrl(isbn);
+    if(bnf){img.src=bnf;return;}
+  }
+
+  // Step 4: Longitood (async)
+  if(!img._longitoodTried){
+    img._longitoodTried=true;
+    longitoodCoverUrl(isbn,b?.title||'',b?.author||'').then(url=>{
+      if(url){img.src=url;}else showCoverPlaceholder(img);
+    }).catch(()=>showCoverPlaceholder(img));
+    return;
+  }
+
+  // Step 5: placeholder
+  showCoverPlaceholder(img);
+}
+// ── Shared: parse a book result object → normalized shape ──
+function cleanAuthor(raw, type){
+  if(!raw)return'';
+  // Strip common role qualifiers
+  let s=raw
+    .replace(/\(scénario\)|\(scenario\)|\(dessin\)|\(dessins\)|\(coloriste?\)|\(traduction\)|\(couleurs\)/gi,'')
+    .replace(/,?\s*(scénario|dessin|dessins|coloriste|traducteur|traductrice|couleurs|texte|illustrations?)\s*$/gi,'')
+    .replace(/\b(Auteur du texte|Illustrateur|Scénariste|Coloriste|Dessinateur|Traducteur|Traductrice|Préfacier|Photographe|Adaptateur)\b/gi,'')
+    .replace(/\s{2,}/g,' ')
+    .trim();
+  // Multiple authors: for BD/manga keep first 2, for roman keep first 1
+  const parts=s.split(/\s*[,;\/]\s*/).map(p=>p.trim()).filter(Boolean);
+  if(type==='bd'||type==='manga') return parts.slice(0,2).join(', ');
+  return parts[0]||s;
+}
+function parseGoogleBook(item){
+  const v=item.volumeInfo||{};
+  const type='roman'; // default — type is set by user, not by API
+  const isbn=(v.industryIdentifiers||[]).find(x=>x.type==='ISBN_13')?.identifier||
+             (v.industryIdentifiers||[]).find(x=>x.type==='ISBN_10')?.identifier||'';
+  const rawAuthor=(v.authors||[]).join(', ');
+  return{title:v.title||'',author:cleanAuthor(rawAuthor,type),publisher:v.publisher||'',
+    year:(v.publishedDate||'').slice(0,4),series:'',
+    genre:(v.categories||[]).map(c=>c.split('/').pop().trim()).filter(Boolean)[0]||'',
+    isbn,source:'Google Books',cover:(v.imageLinks?.large||v.imageLinks?.medium||v.imageLinks?.thumbnail)?.replace('http:','https:').replace('&edge=curl','').replace('zoom=1','zoom=2')||null};
+}
+function parseOpenLibraryDoc(doc){
+  // Prefer cover_i (by OL ID, more reliable) then fall back to ISBN
+  let cover=null;
+  if(doc.cover_i) cover=`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;
+  else if(doc.isbn&&doc.isbn[0]) cover=`https://covers.openlibrary.org/b/isbn/${doc.isbn[0]}-L.jpg`;
+  const isbn=(doc.isbn||[]).find(i=>i.length===13)||(doc.isbn||[])[0]||'';
+  const rawAuthors=(doc.author_name||[]).map(n=>{
+    // "Lastname, Firstname" → "Firstname Lastname"
+    if(n.includes(',')){const p=n.split(',');return((p[1]||'').trim()+' '+(p[0]||'').trim()).trim();}
+    return n;
+  }).join(', ');
+  return{title:doc.title||'',author:cleanAuthor(rawAuthors,'roman'),
+    publisher:(doc.publisher||[])[0]||'',year:String(doc.first_publish_year||''),
+    series:(doc.series||[])[0]||'',
+    genre:(doc.subject||[]).filter(s=>s.length<30)[0]||'',
+    isbn,source:'Open Library',cover};
+}
+// ── BnF data cleaners ──────────────────────────────────────
+function bnfCleanTitle(raw){
+  if(!raw)return'';
+  // "Aldobrando / scénario, Gipi ; dessin, Luigi Critone …" → "Aldobrando"
+  return raw.split('/')[0].split(':')[0].trim().replace(/\.$/,'').trim();
+}
+
+function bnfCleanName(raw){
+  // "Critone, Luigi (1974-....). Illustrateur" → "Luigi Critone"
+  if(!raw)return'';
+  let name=raw
+    .replace(/\s*\([^)]*\)\./g,'')   // remove (1963-....)
+    .replace(/\s*\([^)]*\)/g,'')     // remove remaining (...)
+    .replace(/\.\s*(Auteur|Illustrateur|Scénariste|Coloriste|Dessinateur|Traducteur|Traductrice|Éditeur|Préfacier|Photographe|Graveur|Adaptateur|Auteur du texte).*$/i,'')
+    .trim();
+  // "Lastname, Firstname" → "Firstname Lastname"
+  if(name.includes(',')){
+    const p=name.split(',');
+    name=(p[1]||'').trim()+' '+(p[0]||'').trim();
+  }
+  return name.trim();
+}
+
+function bnfGetRole(raw){
+  if(/auteur du texte|scénariste|auteur/i.test(raw))return'scénario';
+  if(/illustrateur|dessinateur|dessins/i.test(raw))return'dessin';
+  if(/coloriste/i.test(raw))return'couleurs';
+  if(/traducteur|traductrice/i.test(raw))return'traduction';
+  return'';
+}
+
+function bnfCleanAuthors(rawCreator, rawContribs, type){
+  // Gather all author strings
+  const all=[];
+  if(rawCreator) all.push(rawCreator);
+  if(rawContribs) rawContribs.split(/\s*;\s*/).forEach(s=>{if(s.trim())all.push(s.trim());});
+
+  const entries=all.map(s=>({name:bnfCleanName(s), role:bnfGetRole(s)}))
+    .filter(e=>e.name&&!['couleurs','traduction'].includes(e.role));
+
+  const isTextual=['roman','novella','nouvelle','inconnu'].includes(type);
+
+  if(isTextual){
+    // Single main author — prefer "scénario/auteur" role, else first
+    const main=entries.find(e=>e.role==='scénario'||e.role==='')||entries[0];
+    return main?main.name:'';
+  } else {
+    // BD/Manga: scenario + dessin
+    const writer=entries.find(e=>e.role==='scénario')||entries[0];
+    const artist=entries.find(e=>e.role==='dessin'&&e!==writer);
+    const parts=[];
+    if(writer) parts.push(writer.name+(artist?' (scénario)':''));
+    if(artist) parts.push(artist.name+' (dessin)');
+    return parts.join(', ');
+  }
+}
+
+function bnfCleanPublisher(raw){
+  if(!raw)return'';
+  // "Casterman (Bruxelles)" → "Casterman"
+  return raw.replace(/\s*\([^)]*\)/g,'').replace(/,\s*(Paris|Lyon|Bruxelles|Genève|Montréal|Londres|New York|Toulouse|Strasbourg|Grenoble|Rennes).*$/i,'').trim();
+}
+
+function parseBnfDoc(doc, currentType){
+  const getAll=(el,tag)=>Array.from(el.querySelectorAll(tag)).map(n=>n.textContent?.trim()).filter(Boolean);
+  const get=(el,tag)=>getAll(el,tag)[0]||'';
+  const rawTitle=get(doc,'title');
+  if(!rawTitle)return null;
+  const rawCreator=get(doc,'creator');
+  const rawContribs=getAll(doc,'contributor').join(' ; ');
+  const rawPublisher=get(doc,'publisher');
+  const year=(get(doc,'date')||'').slice(0,4);
+  const identifiers=getAll(doc,'identifier');
+  const isbn=identifiers.map(s=>s.replace(/[^0-9X]/gi,'')).find(s=>(s.startsWith('978')||s.startsWith('979'))&&s.length===13)||'';
+  const cover=isbn?`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`:null;
+  const title=bnfCleanTitle(rawTitle);
+  const author=bnfCleanAuthors(rawCreator,rawContribs,currentType||'inconnu');
+  const publisher=bnfCleanPublisher(rawPublisher);
+  return{title,author,publisher,year,series:'',genre:'',isbn,source:'BnF',cover};
+}
+
+function showSearchResults(results, container, spinner){
+  spinner.style.display='none';
+  if(!results.length){
+    container.style.display='block';
+    container.innerHTML='<div class="info-box gold">Aucun résultat. Essayez avec l\'ISBN ou modifiez la recherche.</div>';
+    return;
+  }
+  // Deduplicate by title+author
+  const seen=new Set();
+  const deduped=results.filter(r=>{
+    const k=(r.title+r.author).toLowerCase().replace(/[\s]/g,'');
+    if(seen.has(k))return false; seen.add(k); return true;
+  }).map(r=>{
+    // Upgrade OL cover size and fix ISBN-based URLs
+    if(r.cover&&r.cover.includes('openlibrary.org')){
+      r.cover=r.cover.replace(/-S\.jpg$/,'-M.jpg').replace(/-M\.jpg$/,'-L.jpg');
+    }
+    return r;
+  });
+  const html=`<div class="search-result-header">📡 ${deduped.length} résultat(s) — cliquez pour remplir</div>
+    <div class="search-result-list">${deduped.map((r,i)=>`
+    <div class="search-result-item" onclick="applySearchResult(${i})">
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        ${r.cover?`<img src="${r.cover}" style="width:36px;height:54px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.style.display='none'">`:'<div style="width:36px;height:54px;background:var(--bg2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📚</div>'}
+        <div style="flex:1;min-width:0;">
+          <div class="sri-title">${esc(r.title)}</div>
+          <div class="sri-meta">${esc(r.author)||'Auteur inconnu'}${r.year?' · '+esc(r.year):''}${r.publisher?' · '+esc(r.publisher):''}</div>
+          ${r.series?`<div class="sri-meta">Série : ${esc(r.series)}</div>`:''}
+          ${r.genre?`<div class="sri-meta" style="color:var(--gold)">🏷 ${esc(r.genre)}</div>`:''}
+          <div class="sri-source">${r.source}${r.isbn?' · ISBN '+r.isbn:''}</div>
+        </div>
+      </div>
+    </div>`).join('')}
+    </div>`;
+  window._searchResultsData=deduped;
+  container.style.display='block';
+  container.innerHTML=html;
+}
+
+async function searchByTitle(){
+  const title=document.getElementById('f-title').value.trim();
+  const author=document.getElementById('f-author').value.trim();
+  if(!title){showToast('Saisissez d\'abord un titre.','error');return;}
+  const btn=document.getElementById('searchTitleBtn');
+  btn.disabled=true;
+  const spinner=document.getElementById('searchSpinner');
+  const container=document.getElementById('searchResults');
+  spinner.style.display='block';
+  container.style.display='none';
+
+  // Build queries — combine title+author when available
+  const titleQ=encodeURIComponent(title);
+  const authorQ=author?encodeURIComponent(author):'';
+  const gbQ=author?`intitle:${titleQ}+inauthor:${authorQ}`:titleQ;
+  const olQ=author?`title=${titleQ}&author=${authorQ}`:`q=${titleQ}`;
+  // BnF SRU query
+  const bnfQ=author
+    ?`bib.title+adj+"${title}"+and+bib.author+adj+"${author}"`
+    :`bib.title+adj+"${title}"`;
+
+  try{
+    const [gbResp,olResp,bnfResp]=await Promise.allSettled([
+      fetch(`https://www.googleapis.com/books/v1/volumes?q=${gbQ}&maxResults=6&langRestrict=fr`),
+      fetch(`https://openlibrary.org/search.json?${olQ}&limit=6&language=fre`),
+      fetch(`https://catalogue.bnf.fr/api/SRU?version=1.2&operation=searchRetrieve&query=${bnfQ}&recordSchema=dublincore&maximumRecords=5`)
+    ]);
+
+    const results=[];
+
+    if(gbResp.status==='fulfilled'&&gbResp.value.ok){
+      const d=await gbResp.value.json();
+      (d.items||[]).forEach(item=>results.push(parseGoogleBook(item)));
+    }
+    if(olResp.status==='fulfilled'&&olResp.value.ok){
+      const d=await olResp.value.json();
+      (d.docs||[]).slice(0,5).forEach(doc=>results.push(parseOpenLibraryDoc(doc)));
+    }
+    if(bnfResp.status==='fulfilled'&&bnfResp.value.ok){
+      const xml=await bnfResp.value.text();
+      const parser=new DOMParser();
+      const xmlDoc=parser.parseFromString(xml,'text/xml');
+      Array.from(xmlDoc.querySelectorAll('record')).slice(0,4).forEach(rec=>{
+        const parsed=parseBnfDoc(rec, typeof selectedType!=='undefined'?selectedType:'inconnu');
+        if(parsed)results.push(parsed);
+      });
+    }
+
+    // Enrich missing covers using ISBN
+    results.forEach(r=>{if(!r.cover&&r.isbn)r.cover=`https://covers.openlibrary.org/b/isbn/${r.isbn}-L.jpg`;});
+    showSearchResults(results,container,spinner);
+  }catch(err){
+    spinner.style.display='none';
+    showToast('Erreur de recherche : '+err.message,'error');
+  }finally{btn.disabled=false;}
+}
+
+async function searchByIsbn(){
+  const raw=document.getElementById('f-isbn').value.trim().replace(/[^0-9X]/gi,'');
+  if(!raw||raw.length<10){showToast('ISBN invalide (10 ou 13 chiffres).','error');return;}
+  const btn=document.getElementById('searchIsbnBtn');
+  btn.disabled=true;
+  const spinner=document.getElementById('searchSpinner');
+  const container=document.getElementById('searchResults');
+  spinner.style.display='block';
+  container.style.display='none';
+
+  try{
+    const [gbResp,olResp]=await Promise.allSettled([
+      fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${raw}`),
+      fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${raw}&format=json&jscmd=data`)
+    ]);
+
+    const results=[];
+
+    if(gbResp.status==='fulfilled'&&gbResp.value.ok){
+      const d=await gbResp.value.json();
+      (d.items||[]).forEach(item=>results.push(parseGoogleBook(item)));
+    }
+    if(olResp.status==='fulfilled'&&olResp.value.ok){
+      const d=await olResp.value.json();
+      const key=`ISBN:${raw}`;
+      if(d[key]){
+        const b=d[key];
+        results.push({
+          title:b.title||'',
+          author:(b.authors||[]).map(a=>a.name).join(', '),
+          publisher:(b.publishers||[]).map(p=>p.name).join(', '),
+          year:(b.publish_date||'').slice(-4)||'',
+          series:(b.series||[])[0]||'',
+          genre:(b.subjects||[]).map(s=>s.name||s).filter(s=>String(s).length<30)[0]||'',
+          isbn:raw,source:'Open Library',
+          cover:b.cover?.medium||b.cover?.large||null
+        });
+      }
+    }
+
+    if(!results.length){
+      // Fallback: try multiple cover sources
+      const coverUrl=`https://covers.openlibrary.org/b/isbn/${raw}-L.jpg`;
+      results.push({title:'',author:'',publisher:'',year:'',series:'',genre:'',
+        isbn:raw,source:'Open Library',cover:coverUrl});
+    } else {
+      // Ensure we have the best cover — if missing, try OL ISBN cover
+      results.forEach(r=>{
+        if(!r.cover&&r.isbn){
+          r.cover=`https://covers.openlibrary.org/b/isbn/${r.isbn}-L.jpg`;
+        }
+      });
+    }
+
+    showSearchResults(results,container,spinner);
+    // Auto-fill isbn field
+    if(results[0]?.isbn)document.getElementById('f-isbn').value='';
+  }catch(err){
+    spinner.style.display='none';
+    showToast('Erreur ISBN : '+err.message,'error');
+  }finally{btn.disabled=false;}
+}
+
+async function searchByAuthor(){
+  const author=document.getElementById('f-author').value.trim();
+  if(!author){showToast("Saisissez d\'abord un nom d\'auteur.",'error');return;}
+  const btn=document.getElementById('searchAuthorBtn');
+  btn.disabled=true;
+  document.getElementById('authorSearchSpinner').style.display='block';
+  document.getElementById('authorSearchResults').style.display='none';
+  try{
+    // Open Library author search
+    const r=await fetch(`https://openlibrary.org/search/authors.json?q=${encodeURIComponent(author)}&limit=8`);
+    const d=await r.json();
+    const authors=(d.docs||[]).slice(0,6);
+    document.getElementById('authorSearchSpinner').style.display='none';
+    if(!authors.length){
+      document.getElementById('authorSearchResults').style.display='block';
+      document.getElementById('authorSearchResults').innerHTML='<div class="info-box gold">Aucun auteur trouvé.</div>';
+      return;
+    }
+    const html=`<div class="search-result-header">👤 ${authors.length} auteur(s) trouvé(s)</div>
+      <div class="search-result-list">${authors.map((a,i)=>`
+      <div class="search-result-item" onclick="applyAuthorResult(${i})">
+        <div class="sri-title">${esc(a.name||'')}</div>
+        <div class="sri-meta">${a.birth_date?'Né(e) '+esc(a.birth_date):''}${a.death_date?' · †'+esc(a.death_date):''}${a.top_work?' · '+esc(a.top_work):''}</div>
+        <div class="sri-source">Open Library · ${a.work_count||0} œuvre(s)</div>
+      </div>`).join('')}
+      </div>`;
+    window._authorResultsData=authors;
+    document.getElementById('authorSearchResults').style.display='block';
+    document.getElementById('authorSearchResults').innerHTML=html;
+  }catch(err){
+    document.getElementById('authorSearchSpinner').style.display='none';
+    showToast('Erreur : '+err.message,'error');
+  }finally{btn.disabled=false;}
+}
+
+function applyAuthorResult(i){
+  const a=window._authorResultsData[i];
+  if(!a)return;
+  document.getElementById('f-author').value=a.name||'';
+  document.getElementById('authorSearchResults').innerHTML=`<div class="info-box green">✅ Auteur sélectionné : ${esc(a.name||'')}. Vous pouvez lancer une recherche par titre.</div>`;
+  showToast('✅ Auteur rempli !','success');
+}
+
+function applySearchResult(i){
+  const r=window._searchResultsData[i];
+  if(!r)return;
+  if(r.title) document.getElementById('f-title').value=r.title;
+  if(r.author) document.getElementById('f-author').value=r.author;
+  if(r.publisher) document.getElementById('f-publisher').value=r.publisher;
+  if(r.year) document.getElementById('f-year').value=r.year;
+  if(r.series) document.getElementById('f-series').value=r.series;
+  if(r.isbn) document.getElementById('f-isbn').value=r.isbn;
+  if(r.cover){
+    document.getElementById('f-cover-url').value=r.cover;
+    previewCoverUrl(r.cover);
+    switchCoverTab('url', document.querySelectorAll('.cover-tab')[1]);
+  }
+  if(r.genre) document.getElementById('f-genre').value=r.genre;
+  const extras=[r.cover?'couverture':'',r.genre?'genre':'',r.isbn?'ISBN':''].filter(Boolean);
+  document.getElementById('searchResults').innerHTML=`<div class="info-box green">✅ Champs remplis depuis ${esc(r.source)}${extras.length?' ('+extras.join(', ')+' inclus)':''}. Vérifiez et complétez si besoin.</div>`;
+  showToast('✅ Champs remplis !','success');
+}
+
+function findDuplicate(book){
+  if(book.id&&books.find(b=>b.id===book.id))return books.find(b=>b.id===book.id);
+  return books.find(b=>{
+    const sameTitle=b.title.toLowerCase().trim()===book.title.toLowerCase().trim();
+    if(!sameTitle)return false;
+    if(book.isbn&&b.isbn&&book.isbn===b.isbn)return true;
+    const sameAuthor=!book.author||!b.author||(b.author.toLowerCase().trim()===book.author.toLowerCase().trim());
+    return sameAuthor;
+  });
+}
+
+let _pendingDupBook=null,_pendingDupResolve=null;
+function saveWithDupCheck(book,onSaved){
+  if(book.id&&books.find(b=>b.id===book.id)){
+    // editing existing — just overwrite
+    upsertLocal(book);onSaved&&onSaved();return;
+  }
+  const dup=findDuplicate(book);
+  if(!dup){upsertLocal(book);onSaved&&onSaved();return;}
+  _pendingDupBook=book;_pendingDupResolve=onSaved;
+  document.getElementById('dupModalMsg').innerHTML=
+    `<strong>${esc(dup.title)}</strong> est déjà dans votre bibliothèque`+
+    (dup.author?` (${esc(dup.author)})`:'')+'.<br>Que souhaitez-vous faire ?';
+  openModal('dupModal');
+}
+function dupChoice(choice){
+  closeModal('dupModal');
+  if(!_pendingDupBook)return;
+  const book=_pendingDupBook;
+  if(choice==='overwrite'){
+    const dup=findDuplicate(book);
+    if(dup)book.id=dup.id;
+    upsertLocal(book);
+  } else if(choice==='keepboth'){
+    book.id=genUUID();
+    upsertLocal(book);
+  }
+  // skip: do nothing
+  const fn=_pendingDupResolve;_pendingDupBook=null;_pendingDupResolve=null;
+  if(choice!=='skip')fn&&fn();
+  showToast(choice==='overwrite'?'✅ Remplacé !':choice==='keepboth'?'✅ Les deux conservés !':'⏭ Ignoré.','success');
+}
+function upsertLocal(book){const idx=books.findIndex(b=>b.id===book.id);if(idx>=0)books[idx]=book;else books.unshift(book);saveBooks();buildGenreSelect();renderGrid();}
+
+function compressImage(dataUrl,maxPx=600,quality=0.75){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1,maxPx/Math.max(img.width,img.height));
+      const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg',quality));
+    };img.src=dataUrl;
+  });
+}
+
+async function handlePhotoSelect(e){
+  const file=e.target.files[0];if(!file)return;
+  currentPhotoMime='image/jpeg';
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    const compressed=await compressImage(ev.target.result);
+    currentPhoto=compressed.split(',')[1];
+    document.getElementById('photoZone').style.display='none';
+    const wrap=document.getElementById('photoPreviewWrap');
+    wrap.style.display='block';
+    wrap.innerHTML=`<div class="photo-preview"><img src="${compressed}" alt="Couverture"><button class="remove-photo" onclick="removePhoto()">✕</button></div>`;
+    document.getElementById('analyseBtn').style.display='block';
+    document.getElementById('analyseResult').style.display='none';
+    document.getElementById('ocrFormWrap').style.display='none';
+  };reader.readAsDataURL(file);
+}
+function removePhoto(){
+  currentPhoto=null;document.getElementById('photoInput').value='';
+  document.getElementById('photoZone').style.display='block';
+  document.getElementById('photoPreviewWrap').style.display='none';
+  document.getElementById('photoPreviewWrap').innerHTML='';
+  document.getElementById('analyseBtn').style.display='none';
+  document.getElementById('analyseResult').style.display='none';
+  document.getElementById('ocrFormWrap').style.display='none';
+}
+
+async function analysePhoto(){
+  const apiKey=getApiKey();
+  if(!apiKey){showToast('Configurez votre clé API Claude.','error');openSettings();return;}
+  if(!currentPhoto){showToast("Sélectionnez d'abord une photo.",'error');return;}
+  document.getElementById('analyseBtn').style.display='none';
+  document.getElementById('analyseSpinner').style.display='block';
+  document.getElementById('analyseResult').style.display='none';
+  document.getElementById('ocrFormWrap').style.display='none';
+  const prompt=`Regarde cette couverture. Réponds UNIQUEMENT en JSON valide sans texte autour :\n{"titre":"","auteur":"","editeur":"","collection":"","serie":"","tome":"","type":"bd|roman|manga|novella|nouvelle","annee":"","genre":""}`;
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-opus-4-5',max_tokens:350,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:currentPhotoMime,data:currentPhoto}},
+        {type:'text',text:prompt}
+      ]}]})});
+    if(!resp.ok){const e=await resp.json();throw new Error(e.error?.message||resp.statusText);}
+    const data=await resp.json();
+    const raw=data.content?.[0]?.text||'{}';
+    let json;
+    try{json=JSON.parse(raw.replace(/```json|```/g,'').trim());}
+    catch(e){throw new Error('Réponse non parsable : '+raw);}
+    document.getElementById('analyseSpinner').style.display='none';
+    const resDiv=document.getElementById('analyseResult');
+    resDiv.style.display='block';
+    resDiv.innerHTML=`<div class="analysis-result"><h4>✨ Détecté</h4>${aRow('Titre',json.titre)}${aRow('Auteur',json.auteur)}${aRow('Éditeur',json.editeur)}${aRow('Collection',json.collection)}${aRow('Série',json.serie)}${aRow('Tome',json.tome)}${aRow('Type',json.type)}${aRow('Année',json.annee)}${aRow('Genre',json.genre)}</div>`;
+    document.getElementById('o-title').value=json.titre||'';
+    document.getElementById('o-author').value=json.auteur||'';
+    document.getElementById('o-publisher').value=json.editeur||'';
+    document.getElementById('o-collection').value=json.collection||'';
+    document.getElementById('o-series').value=json.serie||'';
+    document.getElementById('o-volume').value=json.tome||'';
+    document.getElementById('o-type').value=['bd','roman','manga','novella','nouvelle','inconnu'].includes(json.type)?json.type:'inconnu';
+    document.getElementById('o-genre').value=json.genre||'';
+    if(json.titre)enrichGoogleBooks(json.titre,json.auteur);
+    document.getElementById('ocrFormWrap').style.display='block';
+  }catch(err){
+    document.getElementById('analyseSpinner').style.display='none';
+    document.getElementById('analyseBtn').style.display='block';
+    showToast('Erreur API : '+err.message,'error');
+    console.error(err);
+  }
+}
+function aRow(k,v){if(!v)return'';return`<div class="ai"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;}
+
+async function enrichGoogleBooks(title,author){
+  try{
+    const q=encodeURIComponent(title+(author?'+inauthor:'+author:''));
+    const r=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&langRestrict=fr`);
+    const d=await r.json();const item=d.items?.[0]?.volumeInfo;if(!item)return;
+    if(!document.getElementById('o-publisher').value&&item.publisher)document.getElementById('o-publisher').value=item.publisher;
+    if(!document.getElementById('o-author').value&&item.authors)document.getElementById('o-author').value=item.authors.join(', ');
+    document.getElementById('analyseResult').innerHTML+=`<div style="margin-top:8px;font-size:11px;color:var(--text-dim)">📡 Enrichi via Google Books</div>`;
+  }catch(e){}
+}
+
+async function saveOcr(){
+  const title=document.getElementById('o-title').value.trim();
+  if(!title){showToast('Le titre est obligatoire.','error');return;}
+  const previewImg=document.querySelector('#photoPreviewWrap img');
+  const book={id:genUUID(),type:document.getElementById('o-type').value,title,
+    author:document.getElementById('o-author').value.trim(),
+    publisher:document.getElementById('o-publisher').value.trim(),
+    collection:document.getElementById('o-collection').value.trim(),
+    series:document.getElementById('o-series').value.trim(),
+    volume:document.getElementById('o-volume').value.trim(),
+    genre:document.getElementById('o-genre').value.trim(),
+    year:'',notes:'',readDate:document.getElementById('o-readdate')?.value||'',cover:previewImg?previewImg.src:null,
+    addedAt:Date.now(),updatedAt:Date.now()};
+  saveWithDupCheck(book,()=>{
+    closeModal('addModal');
+    showToast('✅ Ajouté avec analyse IA !','success');
+    sbUpsert(book);
+  });
+}
+
+function openDetail(id){
+  const b=books.find(x=>x.id===id);if(!b)return;
+  document.getElementById('detailContent').innerHTML=`
+    ${b.cover?`<img class="detail-cover" src="${b.cover}" alt="${esc(b.title)}">`:`<div class="detail-cover-placeholder">${TI[b.type]||'📚'}</div>`}
+    <div class="detail-body">
+      <div class="detail-type">${TL[b.type]||b.type}</div>
+      <div class="detail-title">${esc(b.title)}</div>
+      <div class="detail-author">${esc(b.author||'—')}</div>
+      <div class="detail-meta">
+        ${mRow("Maison d'édition",b.publisher)}${mRow('Collection',b.collection)}
+        ${mRow('Série',b.series?(b.series+(b.volume?' · Tome '+b.volume:'')):'')}
+        ${mRow('Genre',b.genre)}${mRow('Parution',b.year)}
+        ${mRow('Ajouté le',b.addedAt?new Date(b.addedAt).toLocaleDateString('fr-FR'):'')}
+        ${mRow('📖 Date de lecture',b.readDate?new Date(b.readDate).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'-')}
+      </div>
+      ${b.notes?`<div class="detail-notes">${esc(b.notes)}</div>`:''}
+      <div class="detail-actions">
+        <button class="btn btn-secondary" style="flex:1" onclick="editBook('${b.id}')">✏️ Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteBook('${b.id}')">🗑</button>
+      </div>
+    </div>`;
+  openModal('detailModal');
+}
+function mRow(k,v){if(!v)return'';return`<div class="detail-meta-row"><span class="key">${k}</span><span class="val">${esc(v)}</span></div>`;}
+
+function editBook(id){
+  closeModal('detailModal');
+  const b=books.find(x=>x.id===id);if(!b)return;
+  editingId=id;selectedType=b.type||'bd';
+  document.getElementById('addModalTitle').textContent='Modifier le titre';
+  document.getElementById('f-title').value=b.title||'';
+  document.getElementById('f-author').value=b.author||'';
+  document.getElementById('f-publisher').value=b.publisher||'';
+  document.getElementById('f-collection').value=b.collection||'';
+  document.getElementById('f-series').value=b.series||'';
+  document.getElementById('f-volume').value=b.volume||'';
+  document.getElementById('f-year').value=b.year||'';
+  document.getElementById('f-notes').value=b.notes||'';
+  document.getElementById('f-genre').value=b.genre||'';
+  document.getElementById('f-readdate').value=b.readDate||'';
+  // Pre-fill cover: if it's a data URL put it in upload preview, else put in URL field
+  if(b.cover) {
+    if(b.cover.startsWith('data:')) {
+      coverDataUrl = b.cover;
+      document.getElementById('coverDropHint').style.display='none';
+      document.getElementById('coverPreview').style.display='block';
+      document.getElementById('coverPreviewImg').src=b.cover;
+      document.getElementById('coverDropZone').classList.add('has-image');
+      switchCoverTab('upload', document.querySelectorAll('.cover-tab')[0]);
+    } else {
+      document.getElementById('f-cover-url').value=b.cover;
+      previewCoverUrl(b.cover);
+      switchCoverTab('url', document.querySelectorAll('.cover-tab')[1]);
+    }
+  }
+  document.querySelectorAll('.type-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.type===b.type));
+  switchTab('manual');document.getElementById('apiKeyBox').style.display='none';
+  openModal('addModal');
+}
+async function deleteBook(id){
+  if(!confirm('Supprimer ce titre ?'))return;
+  books=books.filter(b=>b.id!==id);saveBooks();renderGrid();
+  closeModal('detailModal');showToast('🗑 Supprimé.','');
+  sbDelete(id);
+}
+
+// ── PROFILE ──
+function getProfile(){try{return JSON.parse(localStorage.getItem(PROFILE_KEY)||'{}')}catch(e){return{};}}
+function saveProfile(){
+  const p={
+    firstName:document.getElementById('profileFirstName').value.trim(),
+    lastName:document.getElementById('profileLastName').value.trim(),
+    avatar:document.getElementById('profileAvatarImg').src||''
+  };
+  localStorage.setItem(PROFILE_KEY,JSON.stringify(p));
+  renderUserBar();
+  showToast('✅ Profil enregistré !','success');
+  // Sync display name + avatar to Supabase profiles table
+  try{const sb=getSbClient();if(sb&&currentUser){sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,display_name:((p.firstName||'')+' '+(p.lastName||'')).trim()||'',avatar:p.avatar||''},{onConflict:'id'}).then();}}catch(e){}
+}
+function loadProfileIntoSettings(){
+  const p=getProfile();
+  document.getElementById('profileFirstName').value=p.firstName||'';
+  document.getElementById('profileLastName').value=p.lastName||'';
+  document.getElementById('profileEmail').value=currentUser?.email||'';
+  if(p.avatar){
+    document.getElementById('profileAvatarImg').src=p.avatar;
+    document.getElementById('profileAvatarImg').style.display='block';
+    document.getElementById('profileAvatarPlaceholder').style.display='none';
+    document.getElementById('removeAvatarBtn').style.display='inline-block';
+  } else {
+    document.getElementById('profileAvatarImg').style.display='none';
+    document.getElementById('profileAvatarPlaceholder').style.display='block';
+    document.getElementById('removeAvatarBtn').style.display='none';
+  }
+}
+async function handleAvatarFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const compressed=await compressImage(await new Promise(res=>{
+    const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(file);
+  }),300,0.8);
+  setAvatarPreview(compressed);
+}
+function promptAvatarUrl(){
+  const url=prompt('URL de l\'image de profil :');
+  if(url&&url.startsWith('http'))setAvatarPreview(url);
+}
+function setAvatarPreview(src){
+  document.getElementById('profileAvatarImg').src=src;
+  document.getElementById('profileAvatarImg').style.display='block';
+  document.getElementById('profileAvatarPlaceholder').style.display='none';
+  document.getElementById('removeAvatarBtn').style.display='inline-block';
+}
+function removeAvatar(){
+  document.getElementById('profileAvatarImg').src='';
+  document.getElementById('profileAvatarImg').style.display='none';
+  document.getElementById('profileAvatarPlaceholder').style.display='block';
+  document.getElementById('removeAvatarBtn').style.display='none';
+  const p=getProfile();p.avatar='';localStorage.setItem(PROFILE_KEY,JSON.stringify(p));
+  renderUserBar();
+}
+function renderUserBar(){
+  const p=getProfile();
+  const name=[p.firstName,p.lastName].filter(Boolean).join(' ');
+  const email=currentUser?.email||'';
+  const avatarHtml=p.avatar
+    ?`<img src="${p.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--accent);flex-shrink:0;">`
+    :`<div style="width:28px;height:28px;border-radius:50%;background:var(--bg3);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">👤</div>`;
+  document.getElementById('userEmail').innerHTML=`${avatarHtml}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name?`<strong>${esc(name)}</strong> <span style="color:var(--text-dim);font-size:11px;">${esc(email)}</span>`:esc(email)}</span>`;
+}
+
+async function saveSupabaseConfig(){
+  const url=document.getElementById('sbUrl').value.trim();
+  const key=document.getElementById('sbKey').value.trim();
+  if(!url||!key){showToast('URL et clé requis.','error');return;}
+  localStorage.setItem(SB_URL_KEY,url);localStorage.setItem(SB_KEY_KEY,key);
+  document.getElementById('sbStatus').innerHTML=`<div class="info-box orange">🔄 Test de connexion…</div>`;
+  try{
+    await syncNow(true);
+    document.getElementById('sbStatus').innerHTML=`<div class="info-box green">✅ Connecté et synchronisé !</div>`;
+  }catch(err){
+    document.getElementById('sbStatus').innerHTML=`<div class="info-box gold">❌ Erreur : ${esc(err.message)}<br>Vérifiez l'URL, la clé, et que la table "books" existe.</div>`;
+  }
+}
+function clearSupabase(){
+  if(!confirm('Déconnecter Supabase ?'))return;
+  [SB_URL_KEY,SB_KEY_KEY,LAST_SYNC].forEach(k=>localStorage.removeItem(k));
+  document.getElementById('sbUrl').value='';document.getElementById('sbKey').value='';
+  setSS('offline','Non configuré');document.getElementById('sbStatus').innerHTML='';
+  showToast('Supabase déconnecté.','');
+}
+function saveApiKey(){localStorage.setItem(APIKEY_KEY,document.getElementById('apiKeyInput').value.trim());showToast('🔑 Clé enregistrée.','success');}
+function clearAll(){if(!confirm('Effacer toute la bibliothèque locale ?'))return;books=[];saveBooks();renderGrid();closeModal('settingsModal');showToast('🗑 Effacée.','');}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),books},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`bibliotheque_${new Date().toISOString().slice(0,10)}.json`;a.click();
+  showToast('📤 Export téléchargé.','success');
+}
+function exportExcel(){
+  if(!books.length){showToast('Aucun livre à exporter.','error');return;}
+  const rows=books.map(b=>({
+    Titre:b.title||'',
+    Auteur:b.author||'',
+    Type:b.type||'',
+    Genre:b.genre||'',
+    Série:b.series||'',
+    Tome:b.volume||'',
+    Éditeur:b.publisher||'',
+    Collection:b.collection||'',
+    Année:b.year||'',
+    'Date de lecture':b.readDate||'',
+    ISBN:b.isbn||'',
+    Notes:b.notes||'',
+    'Ajouté le':b.addedAt?new Date(b.addedAt).toLocaleDateString('fr-FR'):'',
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  // Column widths
+  ws['!cols']=[{wch:40},{wch:30},{wch:10},{wch:15},{wch:25},{wch:6},{wch:20},{wch:20},{wch:6},{wch:14},{wch:15},{wch:50},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Bibliothèque');
+  XLSX.writeFile(wb,`kulture_export_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('📊 Export Excel téléchargé.','success');
+}
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      const imported=data.books||data;if(!Array.isArray(imported))throw new Error('Format invalide');
+      const existing=new Set(books.map(b=>b.id));let added=0;
+      imported.forEach(b=>{if(!existing.has(b.id)){books.push(b);added++;}});
+      saveBooks();renderGrid();showToast(`📥 ${added} titre(s) importé(s).`,'success');
+      document.getElementById('importInput').value='';
+    }catch(err){showToast('Erreur : '+err.message,'error');}
+  };reader.readAsText(file);
+}
+
+// ══════════════════════════════════════════
+// EXCEL IMPORT
+// ══════════════════════════════════════════
+const XL_FIELDS=[
+  {key:'title',     label:'Titre',     required:true},
+  {key:'author',    label:'Auteur',    required:false},
+  {key:'type',      label:'Type (bd/roman/manga…)', required:false},
+  {key:'genre',     label:'Genre',     required:false},
+  {key:'series',    label:'Série',     required:false},
+  {key:'volume',    label:'Tome/Vol.', required:false},
+  {key:'publisher', label:'Éditeur',   required:false},
+  {key:'collection',label:'Collection',required:false},
+  {key:'year',      label:'Année',     required:false},
+  {key:'notes',     label:'Notes',     required:false},
+  {key:'readDate',  label:'Date de lecture (AAAA-MM-JJ)', required:false},
+  {key:'cover',     label:'Couverture (URL)', required:false},
+];
+// Synonyms for auto-detection
+const XL_SYNONYMS={
+  title:   ['titre','title','nom','name','book','livre'],
+  author:  ['auteur','author','auteurs','authors','écrivain','writer','dessinateur'],
+  type:    ['type','catégorie','category','format'],
+  genre:   ['genre','genres','sous-genre','subgenre'],
+  series:  ['série','series','saga','collection de série'],
+  volume:  ['tome','vol','volume','numéro','number','#'],
+  publisher:['éditeur','editeur','publisher','maison'],
+  collection:['collection','imprint'],
+  year:    ['année','year','an','parution','date','publication','published'],
+  notes:   ['notes','note','commentaire','comment','avis','review','résumé','description'],
+  readDate:['date lecture','date de lecture','lu le','read date','finished','terminé','date fin'],
+  cover:   ['couverture','cover','image','photo','url','thumbnail','img'],
+};
+
+let xlRawData=[], xlColumns=[], xlMapping={};  // mapping: {appKey: xlColName}
+
+function openXlImport(){
+  xlRawData=[];xlColumns=[];xlMapping={};
+  closeModal('settingsModal');
+  xlGoStep(1);
+  document.getElementById('xlFileInput').value='';
+  document.getElementById('xlFileInfo').style.display='none';
+  document.getElementById('xlDropZone').style.display='block';
+  openModal('xlModal');
+}
+
+function xlGoStep(n){
+  [1,2,3].forEach(i=>{
+    document.getElementById('xlStep'+i).classList.toggle('active',i===n);
+    const btn=document.getElementById('xlStepBtn'+i);
+    btn.className='xl-step-btn'+(i===n?' active':i<n?' done':'');
+  });
+  if(n===2) xlBuildMappingUI();
+  if(n===3) xlBuildPreview();
+}
+
+function handleXlFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      let wb;
+      if(file.name.endsWith('.csv')){
+        wb=XLSX.read(ev.target.result,{type:'string'});
+      } else {
+        wb=XLSX.read(ev.target.result,{type:'array'});
+      }
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const json=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!json.length){showToast('Fichier vide ou non lisible.','error');return;}
+      xlRawData=json;
+      xlColumns=Object.keys(json[0]);
+      // Auto-detect mapping
+      xlMapping={};
+      xlColumns.forEach(col=>{
+        const colLow=col.toLowerCase().trim();
+        for(const [appKey,syns] of Object.entries(XL_SYNONYMS)){
+          if(syns.some(s=>colLow.includes(s)||s.includes(colLow))){
+            if(!Object.values(xlMapping).includes(col)) xlMapping[appKey]=col;
+            break;
+          }
+        }
+      });
+      const info=document.getElementById('xlFileInfo');
+      info.innerHTML=`✅ <strong>${file.name}</strong> — ${xlRawData.length} ligne(s), ${xlColumns.length} colonne(s) détectée(s)`;
+      info.style.display='block';
+      setTimeout(()=>xlGoStep(2),400);
+    }catch(err){showToast('Erreur lecture : '+err.message,'error');}
+  };
+  if(file.name.endsWith('.csv')) reader.readAsText(file,'UTF-8');
+  else reader.readAsArrayBuffer(file);
+}
+
+// Drag state
+let xlDragCol=null;
+
+function xlBuildMappingUI(){
+  const pool=document.getElementById('xlColPool');
+  const grid=document.getElementById('xlMapGrid');
+  pool.innerHTML='';
+  grid.innerHTML='';
+
+  // Build column chips in pool (hide already mapped ones)
+  const mappedCols=new Set(Object.values(xlMapping));
+  xlColumns.forEach(col=>{
+    const isMapped=mappedCols.has(col);
+    const chip=document.createElement('div');
+    chip.className='xl-col-chip'+(isMapped?' mapped':'');
+    chip.draggable=true;
+    chip.dataset.col=col;
+    chip.id='xlchip_'+col.replace(/\W/g,'_');
+    chip.innerHTML=`<span>⠿</span> ${esc(col)}`;
+    chip.addEventListener('dragstart',e=>{
+      xlDragCol=col;
+      chip.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move';
+    });
+    chip.addEventListener('dragend',()=>chip.classList.remove('dragging'));
+    // Touch support
+    chip.addEventListener('touchstart',()=>{xlDragCol=col;},{passive:true});
+    pool.appendChild(chip);
+  });
+
+  // Build mapping rows
+  XL_FIELDS.forEach(f=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:1fr 28px 1fr;gap:0 8px;align-items:center;';
+
+    // Left: app field label
+    const label=document.createElement('div');
+    label.className='xl-field-slot'+(f.required?' required':'');
+    label.innerHTML=`<span class="field-name">${f.label}</span>`;
+
+    // Arrow
+    const arrow=document.createElement('div');
+    arrow.className='xl-arrow';arrow.textContent='←';
+
+    // Right: drop target
+    const target=document.createElement('div');
+    target.className='xl-drop-target'+(xlMapping[f.key]?' filled':'');
+    target.dataset.field=f.key;
+    xlRenderTarget(target,f.key);
+
+    // Drag over
+    target.addEventListener('dragover',e=>{e.preventDefault();target.classList.add('over');});
+    target.addEventListener('dragleave',()=>target.classList.remove('over'));
+    target.addEventListener('drop',e=>{
+      e.preventDefault();
+      target.classList.remove('over');
+      if(xlDragCol){
+        // Remove this col from any other mapping
+        for(const k of Object.keys(xlMapping)){
+          if(xlMapping[k]===xlDragCol) delete xlMapping[k];
+        }
+        xlMapping[f.key]=xlDragCol;
+        xlDragCol=null;
+        xlBuildMappingUI();
+      }
+    });
+    // Touch drop (tap on target while holding)
+    target.addEventListener('touchend',()=>{
+      if(xlDragCol){
+        for(const k of Object.keys(xlMapping)){if(xlMapping[k]===xlDragCol)delete xlMapping[k];}
+        xlMapping[f.key]=xlDragCol;
+        xlDragCol=null;
+        xlBuildMappingUI();
+      }
+    });
+
+    row.appendChild(label);row.appendChild(arrow);row.appendChild(target);
+    grid.appendChild(row);
+  });
+}
+
+function xlRenderTarget(target,fieldKey){
+  const col=xlMapping[fieldKey];
+  if(col){
+    target.className='xl-drop-target filled';
+    target.innerHTML=`<div class="chip-in"><span>${esc(col)}</span><button onclick="xlUnmap('${fieldKey.replace(/'/g,"\\'")}')">✕</button></div>`;
+  } else {
+    target.className='xl-drop-target';
+    target.innerHTML='<span style="font-size:11px;">Glissez une colonne ici</span>';
+  }
+}
+
+function xlUnmap(fieldKey){
+  delete xlMapping[fieldKey];
+  xlBuildMappingUI();
+}
+
+function xlBuildPreview(){
+  const table=document.getElementById('xlPreviewTable');
+  const info=document.getElementById('xlPreviewInfo');
+  const mappedFields=XL_FIELDS.filter(f=>xlMapping[f.key]);
+  if(!mappedFields.length){
+    table.innerHTML='<tr><td style="color:var(--text-dim);padding:12px;">Aucune correspondance définie.</td></tr>';
+    info.textContent='';return;
+  }
+  const preview=xlRawData.slice(0,5);
+  let html='<thead><tr>';
+  mappedFields.forEach(f=>html+=`<th>${esc(f.label)}</th>`);
+  html+='</tr></thead><tbody>';
+  preview.forEach(row=>{
+    html+='<tr>';
+    mappedFields.forEach(f=>{
+      const val=xlMapping[f.key]?String(row[xlMapping[f.key]]||''):'';
+      html+=`<td title="${esc(val)}">${esc(val.slice(0,40))}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody>';
+  table.innerHTML=html;
+  info.innerHTML=`<strong>${xlRawData.length}</strong> livre(s) à importer · aperçu des 5 premiers`;
+}
+
+function xlDoImport(){
+  const TYPE_MAP={
+    'bd':['bd','bande dessinée','bande-dessinée','comic','comics'],
+    'roman':['roman','livre','book','novel','fiction'],
+    'manga':['manga'],
+    'novella':['novella','novelette'],
+    'nouvelle':['nouvelle','short story','short'],
+  };
+  function guessType(val){
+    if(!val)return'inconnu';
+    const v=String(val).toLowerCase().trim();
+    for(const[t,syns]of Object.entries(TYPE_MAP)){if(syns.some(s=>v.includes(s)))return t;}
+    return'inconnu';
+  }
+  let added=0,skipped=0;
+  const existing=new Set(books.map(b=>b.title?.toLowerCase().trim()));
+  xlRawData.forEach(row=>{
+    const get=key=>xlMapping[key]?String(row[xlMapping[key]]||'').trim():'';
+    const title=get('title');
+    if(!title){skipped++;return;}
+    const book={
+      id:genUUID(),
+      type:guessType(get('type')),
+      title, author:get('author'),
+      publisher:get('publisher'), collection:get('collection'),
+      series:get('series'), volume:get('volume'),
+      year:get('year'), genre:get('genre'),
+      notes:get('notes'), cover:get('cover')||null,
+      readDate:get('readDate')||'',
+      addedAt:Date.now(), updatedAt:Date.now(),
+    };
+    books.unshift(book);added++;
+  });
+  saveBooks();buildGenreSelect();renderGrid();
+  closeModal('xlModal');
+  showToast(`📊 ${added} livre(s) importé(s)${skipped?' · '+skipped+' ignoré(s) (sans titre)':''}.`,'success');
+}
+
+// Drag over drop zone (file)
+const xlDZ=document.getElementById('xlDropZone');
+if(xlDZ){
+  xlDZ.addEventListener('dragover',e=>{e.preventDefault();xlDZ.classList.add('dragover');});
+  xlDZ.addEventListener('dragleave',()=>xlDZ.classList.remove('dragover'));
+  xlDZ.addEventListener('drop',e=>{
+    e.preventDefault();xlDZ.classList.remove('dragover');
+    const file=e.dataTransfer.files[0];
+    if(file){document.getElementById('xlFileInput').files=e.dataTransfer.files;handleXlFile({target:{files:[file],name:file.name}});}
+  });
+}
+
+let toastT;
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show '+(type||'');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// PWA Manifest
+(function(){
+  const m={name:'Kulture',short_name:'Kulture',start_url:'.',display:'standalone',background_color:'#1c1b18',theme_color:'#1c1b18',
+    icons:[{src:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%231c1b18" rx="20"/><text y="68" x="50" font-size="60" text-anchor="middle">📚</text></svg>',sizes:'192x192',type:'image/svg+xml'}]};
+  const link=document.createElement('link');link.rel='manifest';link.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/json'}));
+  document.head.appendChild(link);
+})();
+
+// INIT — hide main app until auth
+(function(){
+  const els=['.app-header','.sync-bar','.filter-bar','.stats-bar','.library-grid','.fab'];
+  els.forEach(s=>{const el=document.querySelector(s);if(el)el.style.display='none';});
+})();
+
+// ══════════════════════════════════════════
+// FRIENDS
+// ══════════════════════════════════════════
+let friendViewUserId=null, friendViewName='';
+
+function openFriends(){
+  openModal('friendsModal');
+  switchFriendsTab('friends');
+  loadFriends();
+  loadPending();
+}
+
+function switchFriendsTab(tab){
+  ['friends','pending','find'].forEach(t=>{
+    document.getElementById('ftab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('ftab-panel-'+t).style.display=t===tab?'':'none';
+  });
+}
+
+// ── Supabase helpers ──
+async function sbFriends(){
+  const sb=getSbClient(); if(!sb||!currentUser) return[];
+  const{data}=await sb.from('friendships').select('*')
+    .eq('status','accepted');
+  return data||[];
+}
+async function sbPending(){
+  const sb=getSbClient(); if(!sb||!currentUser) return[];
+  const{data}=await sb.from('friendships').select('*')
+    .eq('addressee_id',currentUser.id).eq('status','pending');
+  return data||[];
+}
+async function sbProfile(userId){
+  const sb=getSbClient(); if(!sb) return null;
+  const{data}=await sb.from('profiles').select('*').eq('id',userId).single();
+  return data;
+}
+async function sbProfileByEmail(email){
+  const sb=getSbClient(); if(!sb) return null;
+  const{data}=await sb.from('profiles').select('*').eq('email',email).maybeSingle();
+  return data;
+}
+async function sbFriendBooks(userId){
+  const sb=getSbClient(); if(!sb||!currentUser) return[];
+  const{data}=await sb.from('books').select('*').eq('user_id',userId).order('added_at',{ascending:false});
+  return(data||[]).map(fromRow);
+}
+
+// ── Render helpers ──
+function avatarHtml(profile,size=38){
+  if(!profile) return `<div class="friend-avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.47)}px">👤</div>`;
+  const name=profile.display_name||profile.email||'?';
+  if(profile.avatar) return `<div class="friend-avatar" style="width:${size}px;height:${size}px;"><img src="${esc(profile.avatar)}" onerror="this.parentElement.textContent='${esc(name[0].toUpperCase())}'" alt=""></div>`;
+  return `<div class="friend-avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.47)}px;font-weight:700;color:var(--accent2);background:rgba(196,103,58,0.15);">${esc(name[0].toUpperCase())}</div>`;
+}
+
+// ── Load friends list ──
+async function loadFriends(){
+  const el=document.getElementById('friendsList');
+  el.innerHTML='<div class="friends-empty">Chargement…</div>';
+  if(!sbOk()){el.innerHTML='<div class="friends-empty">Configurez Supabase pour utiliser les amis.</div>';return;}
+  const rows=await sbFriends();
+  const mine=rows.filter(r=>r.requester_id===currentUser.id||r.addressee_id===currentUser.id);
+  if(!mine.length){el.innerHTML='<div class="friends-empty">Aucun ami pour l\'instant.<br>Utilisez l\'onglet <b>Trouver</b> pour en ajouter.</div>';return;}
+  const profiles=await Promise.all(mine.map(r=>{
+    const otherId=r.requester_id===currentUser.id?r.addressee_id:r.requester_id;
+    return sbProfile(otherId).then(p=>({...p,friendshipId:r.id,otherId}));
+  }));
+  el.innerHTML=profiles.map(p=>`
+  <div class="friend-card">
+    ${avatarHtml(p)}
+    <div class="friend-info">
+      <div class="friend-name">${esc(p.display_name||p.email||'Utilisateur')}</div>
+      <div class="friend-email">${esc(p.email||'')}</div>
+    </div>
+    <div class="friend-actions">
+      <button class="btn-sm primary" onclick="viewFriendLibrary('${p.otherId}','${esc(p.display_name||p.email||'Ami')}')">📚 Bibliothèque</button>
+      <button class="btn-sm danger" onclick="removeFriend('${p.friendshipId}','${esc(p.display_name||p.email||'cet ami')}')">Retirer</button>
+    </div>
+  </div>`).join('');
+}
+
+// ── Load pending invitations ──
+async function loadPending(){
+  if(!sbOk()) return;
+  const rows=await sbPending();
+  const badge=document.getElementById('pendingBadge');
+  const countEl=document.getElementById('pendingCount');
+  const n=rows.length;
+  badge.style.display=n?'':'none';
+  badge.textContent=n;
+  countEl.textContent=n?`(${n})`:'';
+  const el=document.getElementById('pendingList');
+  if(!n){el.innerHTML='<div class="friends-empty">Aucune invitation en attente.</div>';return;}
+  const profiles=await Promise.all(rows.map(r=>sbProfile(r.requester_id).then(p=>({...p,friendshipId:r.id}))));
+  el.innerHTML=profiles.map(p=>`
+  <div class="friend-card">
+    ${avatarHtml(p)}
+    <div class="friend-info">
+      <div class="friend-name">${esc(p.display_name||p.email||'Utilisateur')}</div>
+      <div class="friend-email">${esc(p.email||'')} souhaite être votre ami</div>
+    </div>
+    <div class="friend-actions">
+      <button class="btn-sm primary" onclick="respondFriend('${p.friendshipId}','accepted')">✓ Accepter</button>
+      <button class="btn-sm danger" onclick="respondFriend('${p.friendshipId}','rejected')">✕</button>
+    </div>
+  </div>`).join('');
+}
+
+// ── Search friend by email ──
+async function searchFriend(){
+  const email=document.getElementById('friendSearchEmail').value.trim().toLowerCase();
+  const el=document.getElementById('friendSearchResult');
+  if(!email){showToast('Saisissez un email.','error');return;}
+  if(email===currentUser.email){el.innerHTML='<div class="info-box gold">C\'est votre propre adresse 🙂</div>';return;}
+  el.innerHTML='<div class="friends-empty">Recherche…</div>';
+  const p=await sbProfileByEmail(email);
+  if(!p){el.innerHTML='<div class="info-box gold">Aucun utilisateur trouvé avec cet email.</div>';return;}
+  // Check existing friendship
+  const sb=getSbClient();
+  const{data:existing}=await sb.from('friendships').select('*')
+    .or(`and(requester_id.eq.${currentUser.id},addressee_id.eq.${p.id}),and(requester_id.eq.${p.id},addressee_id.eq.${currentUser.id})`);
+  const rel=existing?.[0];
+  let actionHtml='';
+  if(!rel){
+    actionHtml=`<button class="btn-sm primary" onclick="sendFriendRequest('${p.id}','${esc(p.email)}')">Envoyer une invitation</button>`;
+  } else if(rel.status==='accepted'){
+    actionHtml=`<span style="color:var(--green);font-size:12px;">✅ Déjà amis</span>`;
+  } else if(rel.status==='pending'&&rel.requester_id===currentUser.id){
+    actionHtml=`<span style="color:var(--gold);font-size:12px;">⏳ Invitation envoyée</span>`;
+  } else if(rel.status==='pending'&&rel.addressee_id===currentUser.id){
+    actionHtml=`<button class="btn-sm primary" onclick="respondFriend('${rel.id}','accepted')">✓ Accepter sa demande</button>`;
+  }
+  el.innerHTML=`<div class="friend-card">
+    ${avatarHtml(p)}
+    <div class="friend-info">
+      <div class="friend-name">${esc(p.display_name||p.email)}</div>
+      <div class="friend-email">${esc(p.email)}</div>
+    </div>
+    <div class="friend-actions">${actionHtml}</div>
+  </div>`;
+}
+
+// ── Send / respond / remove ──
+async function sendFriendRequest(addresseeId,email){
+  const sb=getSbClient();
+  const{error}=await sb.from('friendships').insert({requester_id:currentUser.id,addressee_id:addresseeId,status:'pending'});
+  if(error){showToast('Erreur : '+error.message,'error');return;}
+  showToast('✅ Invitation envoyée à '+email,'success');
+  document.getElementById('friendSearchResult').innerHTML='<div class="info-box green">✅ Invitation envoyée !</div>';
+}
+async function respondFriend(friendshipId,status){
+  const sb=getSbClient();
+  const{error}=await sb.from('friendships').update({status}).eq('id',friendshipId);
+  if(error){showToast('Erreur : '+error.message,'error');return;}
+  showToast(status==='accepted'?'✅ Ami accepté !':'Invitation refusée.','success');
+  loadFriends(); loadPending();
+}
+async function removeFriend(friendshipId,name){
+  if(!confirm('Retirer '+name+' de vos amis ?'))return;
+  const sb=getSbClient();
+  await sb.from('friendships').delete().eq('id',friendshipId);
+  showToast('Ami retiré.','');
+  if(friendViewUserId){exitFriendView();}
+  loadFriends();
+}
+
+// ── View friend's library ──
+async function viewFriendLibrary(userId,name){
+  closeModal('friendsModal');
+  friendViewUserId=userId;
+  friendViewName=name;
+  // Show banner
+  const bar=document.getElementById('friendLibBar');
+  document.getElementById('friendLibName').textContent=name;
+  bar.classList.add('visible');
+  // Fetch and display friend's books
+  showToast('Chargement de la bibliothèque de '+name+'…','');
+  const friendBooks=await sbFriendBooks(userId);
+  // Temporarily replace displayed books
+  window._savedBooks=books;
+  window._savedViewMode=viewMode;
+  books=friendBooks;
+  // Render in current viewMode — cards will have import buttons
+  renderFriendGrid(friendBooks,name);
+}
+
+function renderFriendGrid(friendBooks,name){
+  const grid=document.getElementById('libraryGrid');
+  grid.classList.remove('list-view');
+  const q=document.getElementById('searchInput').value.toLowerCase().trim();
+  let f=friendBooks.filter(b=>!q||[b.title,b.author,b.series,b.genre].some(v=>v&&v.toLowerCase().includes(q)));
+  document.getElementById('statsBar').innerHTML=`📚 ${f.length} titre(s) dans la bibliothèque de <b>${esc(name)}</b> — cliquez <b>Importer</b> ou <b>Lu + Importer</b>`;
+  if(!f.length){grid.innerHTML='<div class="empty-state"><div class="icon">📚</div><h3>Bibliothèque vide</h3></div>';return;}
+  grid.innerHTML=f.map(b=>`
+  <div class="book-card friend-book" style="position:relative;">
+    <div class="book-cover ${b.cover?'has-cover':'no-cover'}" onclick="openDetail('${b.id}',true)">
+      ${b.cover?`<img src="${b.cover}" alt="${esc(b.title)}" loading="lazy">`:`<div class="cover-placeholder"><div class="icon">${TI[b.type]||'📚'}</div><div class="lbl">${TL[b.type]||''}</div></div>`}
+      <div class="type-badge">${TL[b.type]||b.type}</div>
+    </div>
+    <div class="book-info" onclick="openDetail('${b.id}',true)">
+      <div class="book-title">${esc(b.title)}</div>
+      <div class="book-author">${esc(b.author||'—')}</div>
+      ${b.series?`<div class="book-series">📁 ${esc(b.series)}${b.volume?' · T.'+esc(b.volume):''}</div>`:''}
+    </div>
+    <div style="display:flex;gap:4px;padding:0 8px 9px;flex-wrap:wrap;">
+      <button class="fl-import-btn import" onclick="importBook('${b.id}')">＋ Importer</button>
+      <button class="fl-import-btn import-read" onclick="importBookRead('${b.id}')">📖 Lu + Importer</button>
+    </div>
+  </div>`).join('');
+}
+
+function exitFriendView(){
+  friendViewUserId=null; friendViewName='';
+  document.getElementById('friendLibBar').classList.remove('visible');
+  // Restore own books
+  if(window._savedBooks!==undefined){books=window._savedBooks;delete window._savedBooks;}
+  renderGrid();
+}
+
+// ── Import a friend's book ──
+async function importBook(bookId,withReadDate=false){
+  const friendBook=(books||[]).find(b=>b.id===bookId);
+  if(!friendBook){showToast('Livre introuvable.','error');return;}
+  // Check if already in own library (by title+author)
+  const own=window._savedBooks||books;
+  const dup=own.find(b=>b.title.toLowerCase()===friendBook.title.toLowerCase()&&
+    (b.author||'').toLowerCase()===(friendBook.author||'').toLowerCase());
+  if(dup){showToast('📚 Déjà dans votre bibliothèque : '+friendBook.title,'');return;}
+  const newBook={...friendBook,
+    id:genUUID(),
+    user_id:currentUser.id,
+    readDate:withReadDate?new Date().toISOString().slice(0,10):'',
+    addedAt:Date.now(),updatedAt:Date.now()};
+  // Save to own collection
+  const saved=window._savedBooks||[];
+  saved.unshift(newBook);
+  window._savedBooks=saved;
+  localStorage.setItem(BOOKS_KEY,JSON.stringify(saved));
+  await sbUpsert(newBook);
+  showToast((withReadDate?'📖 Lu + importé : ':'✅ Importé : ')+newBook.title,'success');
+}
+async function importBookRead(bookId){await importBook(bookId,true);}
+
+// ── Poll pending on sign in ──
+async function pollPendingFriends(){
+  if(!sbOk()||!currentUser) return;
+  const rows=await sbPending();
+  const n=rows.length;
+  const badge=document.getElementById('pendingBadge');
+  if(badge){badge.style.display=n?'':'none';badge.textContent=n;}
+  const countEl=document.getElementById('pendingCount');
+  if(countEl)countEl.textContent=n?`(${n})`:'';
+}
+
+// ══════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════
+function openStats(){
+  renderStats();
+  openModal('statsModal');
+}
+
+function renderStats(){
+  const el=document.getElementById('statsContent');
+  if(!books.length){
+    el.innerHTML='<div class="stat-empty">Aucun livre dans la bibliothèque.</div>';
+    return;
+  }
+
+  // ── Totals ──
+  const total=books.length;
+  const read=books.filter(b=>b.readDate).length;
+  const unread=total-read;
+  const readPct=total?Math.round(read/total*100):0;
+
+  // ── By type ──
+  const byType={};
+  books.forEach(b=>{const t=b.type||'inconnu';byType[t]=(byType[t]||0)+1;});
+  const typeEntries=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+  const maxType=typeEntries[0]?.[1]||1;
+
+  // ── By genre ──
+  const byGenre={};
+  books.forEach(b=>{if(b.genre)byGenre[b.genre]=(byGenre[b.genre]||0)+1;});
+  const genreEntries=Object.entries(byGenre).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxGenre=genreEntries[0]?.[1]||1;
+
+  // ── By author ──
+  const byAuthor={};
+  books.forEach(b=>{if(b.author)byAuthor[b.author]=(byAuthor[b.author]||0)+1;});
+  const authorEntries=Object.entries(byAuthor).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxAuthor=authorEntries[0]?.[1]||1;
+
+  // ── Read dates by year ──
+  const byReadYear={};
+  books.filter(b=>b.readDate).forEach(b=>{
+    const y=new Date(b.readDate).getFullYear();
+    byReadYear[y]=(byReadYear[y]||0)+1;
+  });
+  const readYears=Object.entries(byReadYear).sort((a,b)=>a[0]-b[0]).slice(-10);
+  const maxReadYear=readYears.reduce((m,[,v])=>Math.max(m,v),1);
+
+  // ── Added by year ──
+  const byAddYear={};
+  books.forEach(b=>{
+    if(b.addedAt){
+      const y=new Date(b.addedAt).getFullYear();
+      byAddYear[y]=(byAddYear[y]||0)+1;
+    }
+  });
+  const addYears=Object.entries(byAddYear).sort((a,b)=>a[0]-b[0]).slice(-8);
+  const maxAddYear=addYears.reduce((m,[,v])=>Math.max(m,v),1);
+
+  // ── Average year published ──
+  const years=books.map(b=>parseInt(b.year)).filter(y=>y>1000&&y<2100);
+  const avgYear=years.length?Math.round(years.reduce((a,b)=>a+b,0)/years.length):null;
+  const oldestBook=years.length?books.filter(b=>parseInt(b.year)===Math.min(...years))[0]:null;
+  const newestBook=years.length?books.filter(b=>parseInt(b.year)===Math.max(...years))[0]:null;
+
+  // ── Build HTML ──
+  let html=`
+  <div class="stat-grid">
+    <div class="stat-card accent">
+      <div class="stat-num accent">${total}</div>
+      <div class="stat-label">Titres au total</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-num green">${read}</div>
+      <div class="stat-label">Lus · ${readPct}%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${unread}</div>
+      <div class="stat-label">Non lus (à lire)</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="stat-num gold">${Object.keys(byAuthor).length}</div>
+      <div class="stat-label">Auteurs distincts</div>
+    </div>
+  </div>`;
+
+  // Progress bar read/unread
+  html+=`<div class="stat-section-title">Avancement de lecture</div>
+  <div style="background:var(--bg3);border-radius:6px;overflow:hidden;height:12px;margin-bottom:18px;display:flex;">
+    <div style="width:${readPct}%;background:var(--green);transition:width 0.6s;"></div>
+    <div style="flex:1;background:var(--bg3);"></div>
+  </div>`;
+
+  // By type
+  if(typeEntries.length){
+    html+=`<div class="stat-section-title">Par catégorie</div>`;
+    typeEntries.forEach(([t,n])=>{
+      const pct=Math.round(n/maxType*100);
+      html+=`<div class="stat-bar-row">
+        <div class="stat-bar-label">${TI[t]||'?'} ${TL[t]||t}</div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;"></div></div>
+        <div class="stat-bar-val">${n}</div>
+      </div>`;
+    });
+    html+='<div style="margin-bottom:18px;"></div>';
+  }
+
+  // By genre
+  if(genreEntries.length){
+    html+=`<div class="stat-section-title">Par genre (top ${genreEntries.length})</div>`;
+    genreEntries.forEach(([g,n])=>{
+      const pct=Math.round(n/maxGenre*100);
+      html+=`<div class="stat-bar-row">
+        <div class="stat-bar-label">🏷 ${esc(g)}</div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:var(--gold);"></div></div>
+        <div class="stat-bar-val">${n}</div>
+      </div>`;
+    });
+    html+='<div style="margin-bottom:18px;"></div>';
+  }
+
+  // By author
+  if(authorEntries.length>1){
+    html+=`<div class="stat-section-title">Auteurs les plus représentés</div>`;
+    authorEntries.forEach(([a,n])=>{
+      const pct=Math.round(n/maxAuthor*100);
+      html+=`<div class="stat-bar-row">
+        <div class="stat-bar-label">👤 ${esc(a)}</div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:var(--accent2);"></div></div>
+        <div class="stat-bar-val">${n}</div>
+      </div>`;
+    });
+    html+='<div style="margin-bottom:18px;"></div>';
+  }
+
+  // Books read by year
+  if(readYears.length){
+    html+=`<div class="stat-section-title">Lectures par année</div>
+    <div class="stat-year-row">`;
+    readYears.forEach(([y,n])=>{
+      const h=Math.round(n/maxReadYear*54)+4;
+      html+=`<div class="stat-year-col" title="${y} : ${n} livre(s)">
+        <div class="stat-year-bar" style="height:${h}px;background:var(--green);"></div>
+        <div class="stat-year-lbl">${y}</div>
+      </div>`;
+    });
+    html+='</div><div style="margin-bottom:18px;"></div>';
+  }
+
+  // Books added by year
+  if(addYears.length>1){
+    html+=`<div class="stat-section-title">Ajouts à la bibliothèque</div>
+    <div class="stat-year-row">`;
+    addYears.forEach(([y,n])=>{
+      const h=Math.round(n/maxAddYear*54)+4;
+      html+=`<div class="stat-year-col" title="${y} : ${n} livre(s)">
+        <div class="stat-year-bar" style="height:${h}px;"></div>
+        <div class="stat-year-lbl">${y}</div>
+      </div>`;
+    });
+    html+='</div><div style="margin-bottom:18px;"></div>';
+  }
+
+  // Publication range
+  if(avgYear){
+    html+=`<div class="stat-section-title">Années de parution</div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num" style="font-size:20px;">${Math.min(...years)}</div>
+        <div class="stat-label">Plus ancien</div>
+        ${oldestBook?`<div style="font-size:11px;color:var(--text-dim);margin-top:4px;">${esc(oldestBook.title)}</div>`:''}
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="font-size:20px;">${Math.max(...years)}</div>
+        <div class="stat-label">Plus récent</div>
+        ${newestBook?`<div style="font-size:11px;color:var(--text-dim);margin-top:4px;">${esc(newestBook.title)}</div>`:''}
+      </div>
+      <div class="stat-card wide">
+        <div class="stat-num" style="font-size:20px;">${avgYear}</div>
+        <div class="stat-label">Année de parution moyenne</div>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML=html;
+}
+
+// INIT
+viewMode=localStorage.getItem('kulture_view')||'grid';
+loadBooks();
+if(!books.length){
+  const now=Date.now();
+  books=[
+    {id:'d1',type:'bd',title:'Astérix chez les Bretons',author:'Goscinny / Uderzo',publisher:'Hachette',collection:'Albums Astérix',series:'Astérix',volume:'8',year:'1966',genre:'Humour',notes:'Un classique plein d\'humour sur la Bretagne romaine. Le gag du thé chaud est inoubliable.',cover:'https://covers.openlibrary.org/b/isbn/2012101453-L.jpg',addedAt:now-9e5,updatedAt:now-9e5},
+    {id:'d2',type:'bd',title:'Le Garage hermétique',author:'Jean Giraud (Moebius)',publisher:'Les Humanoïdes Associés',collection:'Métal Hurlant',series:'Major Fatal',volume:'1',year:'1979',genre:'Science-fiction',notes:'Science-fiction psychédélique, un monument de la BD franco-belge.',cover:'https://covers.openlibrary.org/b/isbn/2731600470-L.jpg',addedAt:now-8e5,updatedAt:now-8e5},
+    {id:'d3',type:'bd',title:'Blacksad',author:'Juan Díaz Canales / Juanjo Guarnido',publisher:'Dargaud',collection:'',series:'Blacksad',volume:'1',year:'2000',genre:'Polar',notes:'Polar animalier magnifiquement illustré. L\'aquarelle de Guarnido est époustouflante.',cover:'https://covers.openlibrary.org/b/isbn/2205049917-L.jpg',addedAt:now-7e5,updatedAt:now-7e5},
+    {id:'d4',type:'roman',title:'Dune',author:'Frank Herbert',publisher:'Pocket',collection:'Science-fiction',series:'Le Cycle de Dune',volume:'1',year:'1965',genre:'Science-fiction',notes:'Chef-d\'œuvre absolu de la SF. Une écologie politique et spirituelle sans équivalent.',cover:'https://covers.openlibrary.org/b/isbn/9782266320481-L.jpg',addedAt:now-6e5,updatedAt:now-6e5},
+    {id:'d5',type:'roman',title:'Fondation',author:'Isaac Asimov',publisher:'Gallimard',collection:'Folio SF',series:'Fondation',volume:'1',year:'1951',genre:'Science-fiction',notes:'Le cycle de référence de la SF classique.',cover:'https://covers.openlibrary.org/b/isbn/9782070360536-L.jpg',addedAt:now-5e5,updatedAt:now-5e5},
+    {id:'d6',type:'roman',title:'Le Nom de la rose',author:'Umberto Eco',publisher:'Le Livre de Poche',collection:'',series:'',volume:'',year:'1980',genre:'Polar',notes:'Polar médiéval et enquête sémiotique. Lecture dense mais passionnante.',cover:'https://covers.openlibrary.org/b/isbn/9782253040484-L.jpg',addedAt:now-4e5,updatedAt:now-4e5},
+    {id:'d7',type:'manga',title:'Akira',author:'Katsuhiro Otomo',publisher:'Glénat',collection:'Seinen',series:'Akira',volume:'1',year:'1988',genre:'Cyberpunk',notes:'Le manga cyberpunk qui a tout changé. Tokyo 2019, bikers et pouvoirs psychiques.',cover:'https://covers.openlibrary.org/b/isbn/9782723428262-L.jpg',addedAt:now-3e5,updatedAt:now-3e5},
+    {id:'d8',type:'manga',title:'Berserk',author:'Kentaro Miura',publisher:'Glénat',collection:'Seinen',series:'Berserk',volume:'1',year:'1989',genre:'Dark fantasy',notes:'Dark fantasy d\'une noirceur absolue. Le dessin de Miura est d\'une précision hallucinante.',cover:'https://covers.openlibrary.org/b/isbn/9782723476669-L.jpg',addedAt:now-2e5,updatedAt:now-2e5},
+    {id:'d9',type:'novella',title:'La Métamorphose',author:'Franz Kafka',publisher:'Gallimard',collection:'Folio',series:'',volume:'',year:'1915',genre:'Fantastique',notes:'Gregor Samsa se réveille transformé en insecte. Court, dense, implacable.',cover:'https://covers.openlibrary.org/b/isbn/9782070360222-L.jpg',addedAt:now-1e5,updatedAt:now-1e5},
+    {id:'d10',type:'nouvelle',title:'La Vénus d\'Ille',author:'Prosper Mérimée',publisher:'Gallimard',collection:'Folio',series:'',volume:'',year:'1837',genre:'Fantastique',notes:'Chef-d\'œuvre du fantastique français. La statue de bronze et son regard froid.',cover:'https://covers.openlibrary.org/b/isbn/9782070369430-L.jpg',addedAt:now-5e4,updatedAt:now-5e4},
+  ];saveBooks();
+}
+initAuth();
+</script>
+<!-- EXCEL IMPORT MODAL -->
+<div class="modal-overlay" id="xlModal">
+  <div class="modal" style="max-height:96dvh;">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">📊 Import Excel / CSV</div>
+      <button class="btn-close" onclick="closeModal('xlModal')">✕</button>
+    </div>
+    <div style="padding:16px 18px 20px;">
+
+      <!-- Stepper -->
+      <div class="xl-stepper">
+        <div class="xl-step-btn active" id="xlStepBtn1">① Fichier</div>
+        <div class="xl-step-btn" id="xlStepBtn2">② Colonnes</div>
+        <div class="xl-step-btn" id="xlStepBtn3">③ Aperçu</div>
+      </div>
+
+      <!-- Step 1: file drop -->
+      <div class="xl-step active" id="xlStep1">
+        <div class="xl-drop-zone" id="xlDropZone">
+          <input type="file" id="xlFileInput" accept=".xlsx,.xls,.csv" onchange="handleXlFile(event)">
+          <div style="font-size:36px;margin-bottom:10px;">📊</div>
+          <div style="font-size:14px;color:var(--cream);margin-bottom:4px;"><strong>Glissez ou sélectionnez</strong> votre fichier</div>
+          <div style="font-size:12px;color:var(--text-dim);">Excel (.xlsx, .xls) ou CSV</div>
+        </div>
+        <div id="xlFileInfo" style="display:none;margin-top:12px;" class="info-box green"></div>
+      </div>
+
+      <!-- Step 2: column mapping -->
+      <div class="xl-step" id="xlStep2">
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">
+          Glissez les colonnes de votre fichier vers les champs correspondants de l'app. Les colonnes déjà reconnues sont pré-assignées.
+        </div>
+        <!-- Column pool -->
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin-bottom:6px;">Colonnes disponibles</div>
+        <div class="xl-col-pool" id="xlColPool"></div>
+
+        <!-- Mapping targets -->
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin:12px 0 6px;">Correspondances</div>
+        <div id="xlMapGrid" style="display:flex;flex-direction:column;gap:6px;"></div>
+
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="btn btn-secondary" style="flex:1" onclick="xlGoStep(1)">← Retour</button>
+          <button class="btn btn-primary" style="flex:1" onclick="xlGoStep(3)">Aperçu →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: preview + import -->
+      <div class="xl-step" id="xlStep3">
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;" id="xlPreviewInfo"></div>
+        <div style="overflow-x:auto;max-height:260px;overflow-y:auto;">
+          <table class="xl-preview-table" id="xlPreviewTable"></table>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="btn btn-secondary" style="flex:1" onclick="xlGoStep(2)">← Retour</button>
+          <button class="btn btn-primary" style="flex:1" onclick="xlDoImport()">✅ Importer</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FRIENDS MODAL -->
+<div class="modal-overlay" id="friendsModal">
+  <div class="modal" style="max-height:96dvh;">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">👥 Amis</div>
+      <button class="btn-close" onclick="closeModal('friendsModal')">✕</button>
+    </div>
+    <div style="padding:0 18px 24px;">
+      <div class="friends-tabs">
+        <button class="friends-tab active" id="ftab-friends" onclick="switchFriendsTab('friends')">Mes amis</button>
+        <button class="friends-tab" id="ftab-pending" onclick="switchFriendsTab('pending')">Invitations <span id="pendingCount"></span></button>
+        <button class="friends-tab" id="ftab-find" onclick="switchFriendsTab('find')">Trouver</button>
+      </div>
+
+      <!-- Tab: My friends -->
+      <div id="ftab-panel-friends">
+        <div id="friendsList"><div class="friends-empty">Chargement…</div></div>
+      </div>
+
+      <!-- Tab: Pending -->
+      <div id="ftab-panel-pending" style="display:none">
+        <div id="pendingList"><div class="friends-empty">Chargement…</div></div>
+      </div>
+
+      <!-- Tab: Find -->
+      <div id="ftab-panel-find" style="display:none">
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">Entrez l'adresse email exacte de la personne à ajouter.</div>
+        <div class="friend-search-row">
+          <input class="form-input" id="friendSearchEmail" type="email" placeholder="email@exemple.com" onkeydown="if(event.key==='Enter')searchFriend()">
+          <button class="btn btn-primary" onclick="searchFriend()">Chercher</button>
+        </div>
+        <div id="friendSearchResult"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS MODAL -->
+<div class="modal-overlay" id="statsModal">
+  <div class="modal" style="max-height:96dvh;">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">📊 Statistiques</div>
+      <button class="btn-close" onclick="closeModal('statsModal')">✕</button>
+    </div>
+    <div style="padding:16px 18px 24px;" id="statsContent"></div>
+  </div>
+</div>
+
+</body>
+</html>
