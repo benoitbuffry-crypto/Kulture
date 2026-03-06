@@ -3738,10 +3738,8 @@ handleUrlParams();
       <!-- Tab: Reset password -->
       <div id="atab-panel-reset" style="display:none">
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Saisissez l'email du compte pour envoyer un lien de réinitialisation de mot de passe.</div>
-        <div style="display:flex;gap:8px;margin-bottom:8px;">
-          <input class="form-input" id="adminResetEmail" type="email" placeholder="email@exemple.com" style="flex:1">
-          <button class="btn btn-primary" onclick="sendPasswordReset()">Envoyer</button>
-        </div>
+        <input class="form-input" id="adminResetEmail" type="email" placeholder="email@exemple.com" style="width:100%;margin-bottom:8px;box-sizing:border-box;">
+        <button class="btn btn-primary" style="width:100%" onclick="sendPasswordReset()">Envoyer</button>
         <div id="adminResetResult"></div>
         <div class="info-box gold" style="margin-top:12px;font-size:11px;">ℹ️ Un email de réinitialisation sera envoyé directement à l'utilisateur via Supabase. Vous pouvez aussi communiquer le lien par un autre canal si l'utilisateur vous le demande.</div>
       </div>
