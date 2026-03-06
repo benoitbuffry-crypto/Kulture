@@ -3137,6 +3137,7 @@ function switchAdminTab(tab){
 
 // ── Users table ──
 let _adminUsers=[];
+let _adminLastLogin={};
 async function loadAdminUsers(){
   const sb=getSbClient();if(!sb)return;
   const tbody=document.getElementById('adminUsersTbody');
@@ -3145,6 +3146,16 @@ async function loadAdminUsers(){
     const{data,error}=await sb.from('profiles').select('*').order('updated_at',{ascending:true});
     if(error)throw error;
     _adminUsers=data||[];
+    // Fetch last login per user from logs
+    const{data:loginData}=await sb.from('kulture_logs')
+      .select('user_id,created_at')
+      .eq('event','login')
+      .order('created_at',{ascending:false});
+    // Build map: user_id → last login date
+    _adminLastLogin={};
+    (loginData||[]).forEach(l=>{
+      if(!_adminLastLogin[l.user_id]) _adminLastLogin[l.user_id]=l.created_at;
+    });
     renderAdminUsers(_adminUsers);
   }catch(e){
     tbody.innerHTML=`<tr><td colspan="5" style="color:var(--text-dim);">Erreur : ${esc(e.message)}</td></tr>`;
@@ -3153,18 +3164,23 @@ async function loadAdminUsers(){
 
 function renderAdminUsers(users){
   const tbody=document.getElementById('adminUsersTbody');
-  if(!users.length){tbody.innerHTML='<tr><td colspan="5" style="color:var(--text-dim);">Aucun utilisateur.</td></tr>';return;}
+  if(!users.length){tbody.innerHTML='<tr><td colspan="6" style="color:var(--text-dim);">Aucun utilisateur.</td></tr>';return;}
   tbody.innerHTML=users.map(u=>{
-    const date=u.updated_at?new Date(u.updated_at).toLocaleDateString('fr-FR'):'—';
+    const updAt=u.updated_at?String(u.updated_at):'';
+    const date=updAt?new Date(updAt).toLocaleDateString('fr-FR'):'—';
+    const lastLogin=_adminLastLogin[u.id]
+      ?new Date(_adminLastLogin[u.id]).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+      :'—';
     const isMe=u.id===currentUser?.id;
     const role=u.role||'user';
     return`<tr>
-      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(u.email||'—')}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(u.email||'—')}</td>
       <td>${esc(u.display_name||'—')}</td>
       <td><span class="role-badge ${role}">${role==='superadmin'?'SuperAdmin':'Utilisateur'}</span></td>
-      <td>${date}</td>
+      <td style="white-space:nowrap;">${date}</td>
+      <td style="white-space:nowrap;">${lastLogin}</td>
       <td>${isMe?'<span style="font-size:11px;color:var(--text-dim);">Vous</span>'
-        :`<button class="btn btn-secondary btn-sm" onclick="toggleUserRole('${u.id}','${role}')">${role==='superadmin'?'→ Utilisateur':'→ SuperAdmin'}</button>`}</td>
+        :`<button class="btn btn-secondary btn-sm" onclick="toggleUserRole('${u.id}','${role}')">${role==='superadmin'?'→ Util.':'→ Admin'}</button>`}</td>
     </tr>`;
   }).join('');
 }
@@ -3247,7 +3263,7 @@ function renderAdminStats(logs){
   // Comptes créés par mois
   const byMonth={};
   (_adminUsers||[]).forEach(u=>{
-    if(u.updated_at){const k=u.updated_at.slice(0,7);byMonth[k]=(byMonth[k]||0)+1;}
+    if(u.updated_at){const k=String(u.updated_at).slice(0,7);byMonth[k]=(byMonth[k]||0)+1;}
   });
   const monthEntries=Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0])).slice(-12);
   const maxMonth=Math.max(1,...Object.values(byMonth));
@@ -3356,7 +3372,8 @@ async function exportAdminStats(){
   if(_adminUsers.length){
     const rows=_adminUsers.map(u=>({
       'Email':u.email||'','Nom':u.display_name||'','Rôle':u.role||'user',
-      'Inscrit le':u.updated_at?new Date(u.updated_at).toLocaleDateString('fr-FR'):'',
+      'Inscrit le':u.updated_at?new Date(String(u.updated_at)).toLocaleDateString('fr-FR'):'',
+      'Dernière connexion':_adminLastLogin[u.id]?new Date(_adminLastLogin[u.id]).toLocaleString('fr-FR'):'',
     }));
     const ws3=XLSX.utils.json_to_sheet(rows);
     ws3['!cols']=[{wch:32},{wch:25},{wch:12},{wch:14}];
@@ -3729,7 +3746,7 @@ handleUrlParams();
         </div>
         <div style="overflow-x:auto;">
           <table class="admin-table" id="adminUsersTable">
-            <thead><tr><th>Email</th><th>Nom</th><th>Rôle</th><th>Inscrit le</th><th>Action</th></tr></thead>
+            <thead><tr><th>Email</th><th>Nom</th><th>Rôle</th><th>Inscrit le</th><th>Dernière connexion</th><th>Action</th></tr></thead>
             <tbody id="adminUsersTbody"><tr><td colspan="5" style="color:var(--text-dim);padding:16px;">Chargement…</td></tr></tbody>
           </table>
         </div>
