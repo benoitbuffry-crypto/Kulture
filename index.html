@@ -638,29 +638,67 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
       <div class="modal-title" id="addModalTitle">Ajouter un titre</div>
       <button class="btn-close" onclick="closeModal('addModal')">✕</button>
     </div>
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('manual')">✏️ Manuel</div>
-      <div class="tab" onclick="switchTab('photo')">📷 Photo / IA</div>
-    </div>
-    <div class="tab-panel active" id="tab-manual">
-      <div class="form-body">
+    <div class="form-body" style="padding:16px 18px 24px;">
 
-        <!-- IA CTA -->
-        <button class="ai-identify-btn" onclick="switchTab('photo')" id="aiIdentifyBtn">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-          <div>
-            <div style="font-size:14px;font-weight:700;">Identifier avec l'IA</div>
-            <div style="font-size:11px;opacity:0.75;margin-top:1px;">Prenez une photo de la couverture</div>
+      <!-- IA CTA -->
+      <button class="ai-identify-btn" onclick="togglePhotoZoneInline()" id="aiIdentifyBtn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <div>
+          <div style="font-size:14px;font-weight:700;">Identifier avec l'IA</div>
+          <div style="font-size:11px;opacity:0.75;margin-top:1px;">Prenez une photo de la couverture</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;opacity:0.6;" id="aiIdentifyChevron">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+
+      <!-- Zone photo inline (masquée par défaut) -->
+      <div id="inlinePhotoSection" style="display:none;margin-bottom:8px;">
+        <div class="info-box gold" id="apiKeyBox" style="margin-bottom:10px;">🔑 <strong>Clé API Claude</strong> requise.<br>
+          Configurez-la dans les <a href="#" onclick="closeModal('addModal');openSettings()">Paramètres</a>.</div>
+        <div class="photo-zone" id="photoZone">
+          <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhotoSelect(event)">
+          <div class="iz">📷</div>
+          <p><strong>Prendre ou choisir une photo</strong><br>de la couverture</p>
+        </div>
+        <div id="photoPreviewWrap" style="display:none"></div>
+        <button class="btn btn-outline" id="analyseBtn" onclick="analysePhoto()" style="display:none;width:100%;margin-top:8px;">✨ Analyser avec l'IA</button>
+        <div id="analyseSpinner" style="display:none;text-align:center;padding:14px 0;">
+          <div class="spinner" style="margin:0 auto 8px;"></div>
+          <div style="font-size:12px;color:var(--text-dim)">Analyse en cours…</div>
+        </div>
+        <div id="analyseResult" style="display:none"></div>
+        <div id="ocrFormWrap" style="display:none">
+          <hr class="sep">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin-bottom:10px;margin-top:4px;">Vérifier / Corriger</div>
+          <div style="display:flex;flex-direction:column;gap:11px;">
+            <div class="form-group"><div class="form-label">Titre</div><input class="form-input" id="o-title"></div>
+            <div class="form-group"><div class="form-label">Auteur(s)</div><input class="form-input" id="o-author"></div>
+            <div class="form-row">
+              <div class="form-group"><div class="form-label">Éditeur</div><input class="form-input" id="o-publisher"></div>
+              <div class="form-group"><div class="form-label">Collection</div><input class="form-input" id="o-collection"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><div class="form-label">Série</div><input class="form-input" id="o-series"></div>
+              <div class="form-group"><div class="form-label">Tome</div><input class="form-input" id="o-volume" type="number"></div>
+            </div>
+            <div class="form-group"><div class="form-label">Genre</div><input class="form-input" id="o-genre" placeholder="ex: Science-fiction, Thriller…" list="genreList"></div>
+            <div class="form-group"><div class="form-label">Type</div>
+              <select class="form-select" id="o-type">
+                <option value="bd">BD</option><option value="roman">Roman</option><option value="manga">Manga</option>
+                <option value="novella">Novella</option><option value="nouvelle">Nouvelle</option><option value="inconnu">❓ À renseigner</option>
+              </select>
+            </div>
+            <div class="form-group"><div class="form-label">📖 Date de lecture</div><input class="form-input" id="o-readdate" type="date"></div>
+            <button class="btn btn-primary" onclick="saveOcr()">Ajouter à la bibliothèque</button>
           </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;opacity:0.6;">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </button>
+        </div>
+      </div>
 
-        <div class="ai-divider"><span>ou saisir manuellement</span></div>
+      <div class="ai-divider" id="aiDivider"><span>ou saisir manuellement</span></div>
         <div class="form-group">
           <div class="form-label">Type</div>
           <div class="type-selector">
@@ -745,49 +783,6 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
         <div class="form-group"><div class="form-label">Notes</div><textarea class="form-textarea" id="f-notes" placeholder="Vos impressions…"></textarea></div>
         <div class="form-group"><div class="form-label">📖 Date de lecture</div><input class="form-input" id="f-readdate" type="date"></div>
         <button class="btn btn-primary" onclick="saveManual()">Ajouter à la bibliothèque</button>
-      </div>
-    </div>
-    <div class="tab-panel" id="tab-photo">
-      <div class="form-body">
-        <div class="info-box gold" id="apiKeyBox">🔑 <strong>Clé API Claude</strong> requise.<br>
-          Configurez-la dans les <a href="#" onclick="closeModal('addModal');openSettings()">Paramètres</a>.</div>
-        <div class="photo-zone" id="photoZone">
-          <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhotoSelect(event)">
-          <div class="iz">📷</div>
-          <p><strong>Prendre ou choisir une photo</strong><br>de la couverture</p>
-        </div>
-        <div id="photoPreviewWrap" style="display:none"></div>
-        <button class="btn btn-outline" id="analyseBtn" onclick="analysePhoto()" style="display:none">✨ Analyser avec l'IA</button>
-        <div id="analyseSpinner" style="display:none;text-align:center;padding:14px 0;">
-          <div class="spinner" style="margin:0 auto 8px;"></div>
-          <div style="font-size:12px;color:var(--text-dim)">Analyse en cours…</div>
-        </div>
-        <div id="analyseResult" style="display:none"></div>
-        <div id="ocrFormWrap" style="display:none">
-          <hr class="sep">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin-bottom:10px;margin-top:4px;">Vérifier / Corriger</div>
-          <div style="display:flex;flex-direction:column;gap:11px;">
-            <div class="form-group"><div class="form-label">Titre</div><input class="form-input" id="o-title"></div>
-            <div class="form-group"><div class="form-label">Auteur(s)</div><input class="form-input" id="o-author"></div>
-            <div class="form-row">
-              <div class="form-group"><div class="form-label">Éditeur</div><input class="form-input" id="o-publisher"></div>
-              <div class="form-group"><div class="form-label">Collection</div><input class="form-input" id="o-collection"></div>
-            </div>
-            <div class="form-row">
-              <div class="form-group"><div class="form-label">Série</div><input class="form-input" id="o-series"></div>
-              <div class="form-group"><div class="form-label">Tome</div><input class="form-input" id="o-volume" type="number"></div>
-            </div>
-            <div class="form-group"><div class="form-label">Genre</div><input class="form-input" id="o-genre" placeholder="ex: Science-fiction, Thriller…" list="genreList"></div>
-            <div class="form-group"><div class="form-label">Type</div>
-              <select class="form-select" id="o-type">
-                <option value="bd">BD</option><option value="roman">Roman</option><option value="manga">Manga</option>
-                <option value="novella">Novella</option><option value="nouvelle">Nouvelle</option><option value="inconnu">❓ À renseigner</option>
-              </select>
-            </div>
-            <div class="form-group"><div class="form-label">📖 Date de lecture</div><input class="form-input" id="o-readdate" type="date"></div>
-            <button class="btn btn-primary" onclick="saveOcr()">Ajouter à la bibliothèque</button>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -1511,11 +1506,19 @@ function openSettings(){
 }
 
 let currentTab='manual';
-function switchTab(tab){
-  currentTab=tab;
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='manual'?0:1)));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
+function switchTab(tab){} // kept for compatibility
+function togglePhotoZoneInline(){
+  const section=document.getElementById('inlinePhotoSection');
+  const chevron=document.getElementById('aiIdentifyChevron');
+  const divider=document.getElementById('aiDivider');
+  const open=section.style.display==='none'||section.style.display==='';
+  section.style.display=open?'block':'none';
+  if(chevron) chevron.style.transform=open?'rotate(90deg)':'';
+  if(divider) divider.style.display=open?'':'none';
+  // Auto-trigger file picker on open if no photo yet
+  if(open&&!currentPhoto){
+    setTimeout(()=>document.getElementById('photoInput')?.click(),200);
+  }
 }
 function selectType(type,el){selectedType=type;document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
 
@@ -1526,6 +1529,8 @@ function resetAddForm(){
   currentPhoto=null;
   const aiBtn=document.getElementById('aiIdentifyBtn');if(aiBtn)aiBtn.style.display='flex';
   const divider=document.querySelector('.ai-divider');if(divider)divider.style.display='';
+  const inlinePhoto=document.getElementById('inlinePhotoSection');if(inlinePhoto)inlinePhoto.style.display='none';
+  const chevron=document.getElementById('aiIdentifyChevron');if(chevron)chevron.style.transform='';
   document.getElementById('photoZone').style.display='block';
   document.getElementById('photoPreviewWrap').style.display='none';
   document.getElementById('photoPreviewWrap').innerHTML='';
