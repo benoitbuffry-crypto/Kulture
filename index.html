@@ -1039,10 +1039,14 @@ async function handleForgotPassword(){
   else setAuthMsg('✅ Email de réinitialisation envoyé !','success');
 }
 
+let _signingOut=false;
 async function handleSignOut(){
+  if(_signingOut)return;
+  _signingOut=true;
+  // Close any open modal first
+  document.querySelectorAll('.modal-overlay').forEach(m=>m.style.display='none');
   const sb=getSbClient();
   if(sb) await sb.auth.signOut();
-  // Reload to fully clear state
   window.location.reload();
 }
 
@@ -1094,7 +1098,7 @@ async function initAuth(){
   // Listen to auth changes
   sb.auth.onAuthStateChange(async(event,session)=>{
     if(event==='SIGNED_IN'&&session?.user)await onSignedIn(session.user);
-    if(event==='SIGNED_OUT')handleSignOut();
+    if(event==='SIGNED_OUT' && !_signingOut)handleSignOut();
   });
 }
 
