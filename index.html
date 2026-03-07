@@ -385,6 +385,10 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
 .admin-chart-row{display:flex;gap:4px;align-items:flex-end;}
 .admin-chart-col{flex:1;text-align:center;}
 .invite-section{background:var(--bg3);border-radius:10px;padding:14px;}
+.ai-identify-btn{width:100%;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(196,103,58,0.18),rgba(196,103,58,0.08));border:1.5px solid var(--accent);border-radius:12px;padding:14px 16px;cursor:pointer;color:var(--cream);transition:all 0.2s;margin-bottom:4px;}
+.ai-identify-btn:hover{background:linear-gradient(135deg,rgba(196,103,58,0.28),rgba(196,103,58,0.14));border-color:var(--accent2);}
+.ai-divider{display:flex;align-items:center;gap:10px;margin:14px 0 10px;color:var(--text-dim);font-size:11px;}
+.ai-divider::before,.ai-divider::after{content:'';flex:1;height:1px;background:var(--border);}
 .invite-title{font-family:var(--font-b);font-size:13px;color:var(--cream);margin-bottom:6px;}
 .invite-desc{font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.5;}
 .invite-link-box{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;font-size:11px;color:var(--accent2);word-break:break-all;font-family:monospace;min-height:36px;}
@@ -640,6 +644,23 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
     </div>
     <div class="tab-panel active" id="tab-manual">
       <div class="form-body">
+
+        <!-- IA CTA -->
+        <button class="ai-identify-btn" onclick="switchTab('photo')" id="aiIdentifyBtn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          <div>
+            <div style="font-size:14px;font-weight:700;">Identifier avec l'IA</div>
+            <div style="font-size:11px;opacity:0.75;margin-top:1px;">Prenez une photo de la couverture</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;opacity:0.6;">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+
+        <div class="ai-divider"><span>ou saisir manuellement</span></div>
         <div class="form-group">
           <div class="form-label">Type</div>
           <div class="type-selector">
@@ -1481,7 +1502,7 @@ function openModal(id){document.getElementById(id).classList.add('open');documen
 function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o&&o.id!=='addModal'&&o.id!=='friendsModal')closeModal(o.id);}));
 
-function openAddModal(){editingId=null;resetAddForm();document.getElementById('addModalTitle').textContent='Ajouter un titre';document.getElementById('apiKeyBox').style.display=getApiKey()?'none':'block';openModal('addModal');}
+function openAddModal(){editingId=null;resetAddForm();document.getElementById('addModalTitle').textContent='Ajouter un titre';document.getElementById('apiKeyBox').style.display=getApiKey()?'none':'block';const aiBtn=document.getElementById('aiIdentifyBtn');if(aiBtn)aiBtn.style.display='flex';openModal('addModal');}
 function openSettings(){
   document.getElementById('sbUrl').value=getSbUrl();
   document.getElementById('sbKey').value=getSbKey();
@@ -1503,6 +1524,8 @@ function resetAddForm(){
   document.getElementById('f-volume').value='';
   selectedType='bd';document.querySelectorAll('.type-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
   currentPhoto=null;
+  const aiBtn=document.getElementById('aiIdentifyBtn');if(aiBtn)aiBtn.style.display='flex';
+  const divider=document.querySelector('.ai-divider');if(divider)divider.style.display='';
   document.getElementById('photoZone').style.display='block';
   document.getElementById('photoPreviewWrap').style.display='none';
   document.getElementById('photoPreviewWrap').innerHTML='';
@@ -2253,6 +2276,8 @@ function editBook(id){
   const b=books.find(x=>x.id===id);if(!b)return;
   editingId=id;selectedType=b.type||'bd';
   document.getElementById('addModalTitle').textContent='Modifier le titre';
+  const aiBtn=document.getElementById('aiIdentifyBtn');if(aiBtn)aiBtn.style.display='none';
+  const divider=document.querySelector('.ai-divider');if(divider)divider.style.display='none';
   document.getElementById('f-title').value=b.title||'';
   document.getElementById('f-author').value=b.author||'';
   document.getElementById('f-publisher').value=b.publisher||'';
