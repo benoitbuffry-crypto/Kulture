@@ -488,7 +488,6 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
 <!-- USER BAR (shown when logged in) -->
 <div class="user-bar" id="userBar" style="display:none">
   <div class="user-email" id="userEmail" style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden;cursor:pointer;" onclick="openSettings()"></div>
-  <button class="btn-signout" onclick="handleSignOut()">Déconnexion</button>
 </div>
 
 <header class="app-header" style="display:none">
@@ -867,6 +866,18 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:4px 0;}
       </div>
     </div>
 
+    <!-- ── DÉCONNEXION ── -->
+    <div class="settings-section">
+      <button class="btn btn-secondary" style="width:100%;color:#e07070;border-color:#e07070;opacity:0.85;" onclick="handleSignOut()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:middle;">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Déconnexion
+      </button>
+    </div>
+
     <!-- ── PARAMÈTRES AVANCÉS ── -->
     <div class="settings-section" style="border:none;">
       <h3>🔧 Paramètres avancés</h3>
@@ -1059,18 +1070,9 @@ async function handleForgotPassword(){
 
 async function handleSignOut(){
   const sb=getSbClient();
-  if(sb)await sb.auth.signOut();
-  currentUser=null;
-  books=[];saveBooks();
-  showAuthScreen();
-  document.getElementById('userBar').style.display='none';
-  // Hide main app
-  document.querySelector('.app-header').style.display='none';
-  document.querySelector('.sync-bar').style.display='none';
-  document.querySelector('.filter-bar').style.display='none';
-  document.querySelector('.stats-bar').style.display='none';
-  document.querySelector('.library-grid').style.display='none';
-  document.querySelector('.fab').style.display='none';
+  if(sb) await sb.auth.signOut();
+  // Reload to fully clear state
+  window.location.reload();
 }
 
 async function onSignedIn(user){
